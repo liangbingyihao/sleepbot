@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import request, jsonify
+from flask import request, abort
 
 
 def require_user_id(f):
@@ -8,6 +8,6 @@ def require_user_id(f):
     def decorated(*args, **kwargs):
         user_id = request.headers.get('X-User-Id')
         if not user_id:
-            return jsonify({'code': 'AUTH_REQUIRED', 'msg': '缺少 X-User-Id 请求头'}), 401
+            abort(401, '缺少 X-User-Id 请求头')
         return f(user_id, *args, **kwargs)
     return decorated

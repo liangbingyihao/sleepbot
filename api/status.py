@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, abort
 
 from models import db, UserStatus
 from api.utils import require_user_id
+from api.errors import ok
 
 status_bp = Blueprint('status', __name__)
 
@@ -15,23 +16,20 @@ VALID_STATUSES = {'locked', 'active', 'idle', 'sleeping', 'awake'}
 def report_status(user_id):
     data = request.get_json()
     if not data:
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': '请求体不能为空'}), 400
+        abort(400, '请求体不能为空')
 
     status = data.get('status')
     if not status:
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': 'status 为必填'}), 400
+        abort(400, 'status 为必填')
 
     if status not in VALID_STATUSES:
-        return jsonify({
-            'code': 'INVALID_PARAMETER',
-            'msg': f'无效状态，可选值: {", ".join(sorted(VALID_STATUSES))}'
-        }), 400
+        abort(400, f'无效状态，可选值: {", ".join(sorted(VALID_STATUSES))}')
 
     record = UserStatus(user_id=user_id, status=status)
     db.session.add(record)
     db.session.commit()
 
-    return jsonify({'code': 'OK', 'data': record.to_dict()})
+    return ok(record.to_dict())
 
 
 @status_bp.route('/status/latest', methods=['GET'])
@@ -43,9 +41,9 @@ def get_latest_status(user_id):
         .first()
 
     if not record:
-        return jsonify({'code': 'NOT_FOUND', 'msg': '暂无状态记录'}), 404
+        abort(404, '暂无状态记录')
 
-    return jsonify({'code': 'OK', 'data': record.to_dict()})
+    return ok(record.to_dict())
 
 
 @status_bp.route('/status/history', methods=['GET'])
@@ -60,13 +58,10 @@ def get_status_history(user_id):
         .order_by(UserStatus.reported_at.desc()) \
         .paginate(page=page, per_page=per_page, error_out=False)
 
-    return jsonify({
-        'code': 'OK',
-        'data': {
-            'items': [r.to_dict() for r in pagination.items],
-            'page': pagination.page,
-            'per_page': pagination.per_page,
-            'total': pagination.total,
-            'pages': pagination.pages,
-        }
+    return ok({
+        'items': [r.to_dict() for r in pagination.items],
+        'page': pagination.page,
+        'per_page': pagination.per_page,
+        'total': pagination.total,
+        'pages': pagination.pages,
     })

@@ -94,14 +94,23 @@
   var headings = content.querySelectorAll('h2, h3');
   for (var i = 0; i < headings.length; i++) {
     var h = headings[i];
-    var id = h.textContent.trim().toLowerCase()
-      .replace(/[^\w\u4e00-\u9fff]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    h.id = id;
+    if (!h.id) {
+      var id = h.textContent.trim().toLowerCase()
+        .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      h.id = id;
+    }
     var link = document.createElement('a');
-    link.href = '#' + id;
+    link.href = '#' + h.id;
     link.textContent = h.textContent;
     if (h.tagName === 'H3') link.className = 'h3-link';
+    (function(target) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, null, '#' + target.id);
+      });
+    })(h);
     toc.appendChild(link);
   }
 

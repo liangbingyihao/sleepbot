@@ -1,10 +1,11 @@
 import pytz
 from datetime import time
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, abort
 
 from models import db, SleepConfig
 from api.utils import require_user_id
+from api.errors import ok
 
 sleep_config_bp = Blueprint('sleep_config', __name__)
 
@@ -16,8 +17,8 @@ _ALL_TZ = {tz for tz in pytz.all_timezones}
 def get_sleep_config(user_id):
     config = SleepConfig.query.filter_by(user_id=user_id).first()
     if not config:
-        return jsonify({'code': 'NOT_FOUND', 'msg': '睡眠配置未找到'}), 404
-    return jsonify({'code': 'OK', 'data': config.to_dict()})
+        abort(404, '睡眠配置未找到')
+    return ok(config.to_dict())
 
 
 @sleep_config_bp.route('/config', methods=['POST'])
@@ -25,12 +26,12 @@ def get_sleep_config(user_id):
 def set_sleep_config(user_id):
     data = request.get_json()
     if not data:
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': '请求体不能为空'}), 400
+        abort(400, '请求体不能为空')
 
     sleep_start_str = data.get('sleep_start_time')
     sleep_end_str = data.get('sleep_end_time')
     if not sleep_start_str or not sleep_end_str:
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': 'sleep_start_time 和 sleep_end_time 为必填'}), 400
+        abort(400, 'sleep_start_time 和 sleep_end_time 为必填')
 
     try:
         start_h, start_m = map(int, sleep_start_str.split(':'))
@@ -38,11 +39,11 @@ def set_sleep_config(user_id):
         sleep_start = time(start_h, start_m)
         sleep_end = time(end_h, end_m)
     except (ValueError, AttributeError):
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': '时间格式无效，请使用 HH:MM 格式'}), 400
+        abort(400, '时间格式无效，请使用 HH:MM 格式')
 
     timezone = data.get('timezone', request.headers.get('X-Timezone', 'UTC'))
     if timezone not in _ALL_TZ:
-        return jsonify({'code': 'INVALID_PARAMETER', 'msg': f'无效时区，可用时区列表见 https://en.wikipedia.org/wiki/List_of_tz_database_time_zones'}), 400
+        abort(400, f'无效时区，可用时区列表见 https://en.wikipedia.org/wiki/List_of_tz_database_time_zones')
 
     config = SleepConfig.query.filter_by(user_id=user_id).first()
     if config:
@@ -59,7 +60,7 @@ def set_sleep_config(user_id):
         db.session.add(config)
 
     db.session.commit()
-    return jsonify({'code': 'OK', 'data': config.to_dict()})
+    return ok(config.to_dict())
 
 
 @sleep_config_bp.route('/config', methods=['DELETE'])
@@ -67,8 +68,8 @@ def set_sleep_config(user_id):
 def delete_sleep_config(user_id):
     config = SleepConfig.query.filter_by(user_id=user_id).first()
     if not config:
-        return jsonify({'code': 'NOT_FOUND', 'msg': '睡眠配置未找到'}), 404
+        abort(404, '睡眠配置未找到')
 
     db.session.delete(config)
     db.session.commit()
-    return jsonify({'code': 'OK', 'msg': '删除成功'})
+    return ok(msg='删除成功')
