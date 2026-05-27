@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SleepBot API 文档</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.7;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+  }
+  .toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 100vh;
+    overflow-y: auto;
+    background: #fafafa;
+    border-right: 1px solid #eee;
+    padding: 20px 0;
+    font-size: 14px;
+  }
+  .toc-title {
+    font-weight: 700;
+    font-size: 16px;
+    padding: 0 20px 12px;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 8px;
+  }
+  .toc a {
+    display: block;
+    padding: 4px 20px;
+    color: #555;
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover, .toc a.active {
+    color: #1a73e8;
+    background: #e8f0fe;
+    border-left-color: #1a73e8;
+  }
+  .toc .h3-link { padding-left: 36px; font-size: 13px; }
+  .content {
+    flex: 1;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 20px 40px 80px;
+    margin-left: 240px;
+  }
+  h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+  h2 { border-bottom: 1px solid #eee; padding-bottom: 6px; margin-top: 32px; }
+  h3 { margin-top: 24px; }
+  code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+  pre { background: #f5f5f5; padding: 16px; border-radius: 6px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  th { background: #fafafa; font-weight: 600; }
+  blockquote { border-left: 4px solid #ddd; margin: 0; padding: 0 16px; color: #666; }
+  hr { border: none; border-top: 1px solid #eee; margin: 32px 0; }
+
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    .toc {
+      position: static;
+      width: 100%;
+      height: auto;
+      max-height: 300px;
+      border-right: none;
+      border-bottom: 1px solid #eee;
+    }
+    .content { margin-left: 0; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+<nav class="toc" id="toc">
+  <div class="toc-title">目录</div>
+</nav>
+<main class="content">
+{{ content | safe }}
+</main>
+<script>
+(function() {
+  var toc = document.getElementById('toc');
+  var content = document.querySelector('.content');
+  var headings = content.querySelectorAll('h2, h3');
+  for (var i = 0; i < headings.length; i++) {
+    var h = headings[i];
+    var id = h.textContent.trim().toLowerCase()
+      .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    h.id = id;
+    var link = document.createElement('a');
+    link.href = '#' + id;
+    link.textContent = h.textContent;
+    if (h.tagName === 'H3') link.className = 'h3-link';
+    toc.appendChild(link);
+  }
+
+  var links = toc.querySelectorAll('a');
+  function onScroll() {
+    var scrollY = window.scrollY + 100;
+    var active = links[0];
+    for (var i = 0; i < headings.length; i++) {
+      var el = headings[i];
+      if (el.offsetTop <= scrollY) {
+        active = links[i];
+      }
+    }
+    for (var j = 0; j < links.length; j++) {
+      links[j].classList.remove('active');
+    }
+    if (active) active.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+})();
+</script>
+</body>
+</html>
