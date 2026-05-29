@@ -1,0 +1,1977 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "single_choice",
+      "title": "Can scrolling short videos before bed usually make it easier for your mind to enter a restful state?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Constantly taking in stimulating content before bed may make your brain more alert and harder to calm down."
+    },
+    {
+      "id": 2,
+      "type": "single_choice",
+      "title": "When it is bedtime but you still want to use your phone, which choice is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Put your phone farther away"
+        },
+        {
+          "id": "B",
+          "text": "Keep scrolling in bed until you feel sleepy"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Putting your phone farther away can reduce the chance of picking it up unconsciously."
+    },
+    {
+      "id": 3,
+      "type": "single_choice",
+      "title": "Can using a very bright phone screen before bed affect falling asleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It might"
+        },
+        {
+          "id": "B",
+          "text": "Not at all"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A bright screen and stimulating content may make it harder to wind down before sleep."
+    },
+    {
+      "id": 4,
+      "type": "single_choice",
+      "title": "If you are already very sleepy, is continuing to scroll until you naturally fall asleep usually a good idea?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "The more you scroll, the easier it is to delay sleep and miss the moment when you were truly sleepy."
+    },
+    {
+      "id": 5,
+      "type": "single_choice",
+      "title": "Which activity is more suitable before bed?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Watching stimulating content"
+        },
+        {
+          "id": "B",
+          "text": "Doing something quiet and relaxing"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Lowering stimulation before bed can help your body enter a more restful state."
+    },
+    {
+      "id": 6,
+      "type": "single_choice",
+      "title": "Can fixed sleep and wake times help build better sleep habits?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "Not really"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A stable routine helps your body build a consistent sleep rhythm."
+    },
+    {
+      "id": 7,
+      "type": "single_choice",
+      "title": "If you keep checking messages, comments, and short videos before bed, what may happen to your brain?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It becomes calmer"
+        },
+        {
+          "id": "B",
+          "text": "It becomes more alert"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Constantly refreshing content keeps the brain active."
+    },
+    {
+      "id": 8,
+      "type": "single_choice",
+      "title": "To reduce bedtime phone use, which method is more practical?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Rely only on willpower"
+        },
+        {
+          "id": "B",
+          "text": "Set a screen lock or limit in advance"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Setting rules in advance is usually easier than relying on willpower at bedtime."
+    },
+    {
+      "id": 9,
+      "type": "single_choice",
+      "title": "Does keeping your phone next to your pillow before bed usually increase the chance of using it?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "The easier your phone is to reach, the easier it is to open it without thinking."
+    },
+    {
+      "id": 10,
+      "type": "single_choice",
+      "title": "If you want to relax before bed, which choice is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Scroll short videos for an hour"
+        },
+        {
+          "id": "B",
+          "text": "Put down your phone and do a quiet activity for a few minutes"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Low-stimulation activities are more suitable as a bedtime transition."
+    },
+    {
+      "id": 11,
+      "type": "single_choice",
+      "title": "When you cannot stop scrolling before bed, what should you do first?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Scroll for another ten minutes"
+        },
+        {
+          "id": "B",
+          "text": "Put the phone down and pause"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Interrupting the action first is easier than bargaining with yourself to keep going."
+    },
+    {
+      "id": 12,
+      "type": "single_choice",
+      "title": "When using your phone before bed, does more stimulating content make it more likely to affect sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Stimulating content is more likely to pull your emotions and attention."
+    },
+    {
+      "id": 13,
+      "type": "single_choice",
+      "title": "What kind of sleep environment is more suitable?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Quiet, dim, and with fewer distractions"
+        },
+        {
+          "id": "B",
+          "text": "Bright, noisy, and full of notifications"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Quiet and fewer distractions help the body enter a resting state."
+    },
+    {
+      "id": 14,
+      "type": "single_choice",
+      "title": "What is the main purpose of automatic lock at bedtime?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Help you reduce continued phone use before bed"
+        },
+        {
+          "id": "B",
+          "text": "Make it easier for you to use your phone"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Automatic lock is designed to help you stop at the key moment."
+    },
+    {
+      "id": 15,
+      "type": "single_choice",
+      "title": "Can constantly switching between apps and content before bed make it harder for your brain to calm down?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Possibly"
+        },
+        {
+          "id": "B",
+          "text": "Impossible"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Frequent content switching increases stimulation and attention load."
+    },
+    {
+      "id": 16,
+      "type": "single_choice",
+      "title": "If it is already bedtime tonight, which choice is closer to a healthy habit?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Put the phone down first"
+        },
+        {
+          "id": "B",
+          "text": "Open another video"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Once it is bedtime, reducing new stimulation is better for falling asleep."
+    },
+    {
+      "id": 17,
+      "type": "single_choice",
+      "title": "Why is 'just a little while' often hard to keep when scrolling before bed?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Recommended content keeps bringing new stimulation"
+        },
+        {
+          "id": "B",
+          "text": "After one video, people usually fall asleep immediately"
+        },
+        {
+          "id": "C",
+          "text": "Scrolling in bed will not affect bedtime"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Recommendation feeds and messages can easily turn 'a little while' into a long time."
+    },
+    {
+      "id": 18,
+      "type": "single_choice",
+      "title": "What is most important when trying to build an early-sleep habit?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Decide day by day"
+        },
+        {
+          "id": "B",
+          "text": "Set a fixed plan in advance"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "A fixed plan lowers the decision cost before sleep."
+    },
+    {
+      "id": 19,
+      "type": "single_choice",
+      "title": "If you feel bored or empty before bed, is phone scrolling always the best solution?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Scrolling can briefly fill the emptiness, but it may also make you sleep later."
+    },
+    {
+      "id": 20,
+      "type": "single_choice",
+      "title": "Can reducing notification interruptions before bed help with sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Fewer notifications reduce the chance of being pulled back to your phone."
+    },
+    {
+      "id": 21,
+      "type": "single_choice",
+      "title": "If you want to protect your bedtime, which setting is more helpful?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Automatic bedtime lock"
+        },
+        {
+          "id": "B",
+          "text": "Opening more entertainment apps before bed"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Automatic lock can help cut off the path to continued scrolling at bedtime."
+    },
+    {
+      "id": 22,
+      "type": "single_choice",
+      "title": "As bedtime gets closer, is it more suitable to watch stimulating or tense content?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Before bed, lowering stimulation is better than increasing alertness."
+    },
+    {
+      "id": 23,
+      "type": "single_choice",
+      "title": "What is one possible benefit of putting your phone outside the bed area before sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It reduces picking it up casually"
+        },
+        {
+          "id": "B",
+          "text": "It makes it easier to scroll"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "When the phone is not within reach, it is easier to avoid opening it unconsciously."
+    },
+    {
+      "id": 24,
+      "type": "single_choice",
+      "title": "If you unlock your phone after the lock period has already started, what does it mean?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Tonight's lock plan was interrupted"
+        },
+        {
+          "id": "B",
+          "text": "The lock plan was still fully completed"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Unlocking means this bedtime plan was interrupted."
+    },
+    {
+      "id": 25,
+      "type": "single_choice",
+      "title": "If you did not unlock last night, what does that suggest?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Your bedtime plan was followed well"
+        },
+        {
+          "id": "B",
+          "text": "It is completely meaningless"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Not unlocking means you protected this bedtime plan."
+    },
+    {
+      "id": 26,
+      "type": "single_choice",
+      "title": "When you want to use your phone before bed, what is the main purpose of stopping to answer a few questions first?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Interrupt the impulse and remind yourself to rest"
+        },
+        {
+          "id": "B",
+          "text": "Make yourself more excited"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "The quiz is meant to pause the automatic scrolling state."
+    },
+    {
+      "id": 27,
+      "type": "single_choice",
+      "title": "Which sentence is more suitable as a bedtime reminder?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It is fine to scroll a bit more, it will stop automatically anyway"
+        },
+        {
+          "id": "B",
+          "text": "Put down the phone now and let your body rest"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Stopping in time before bed helps you rest better than continuing to scroll."
+    },
+    {
+      "id": 28,
+      "type": "single_choice",
+      "title": "Can drinking coffee or strong tea before bed affect falling asleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It might"
+        },
+        {
+          "id": "B",
+          "text": "Not at all"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Caffeine is stimulating, and intake in the afternoon or evening may affect sleep."
+    },
+    {
+      "id": 29,
+      "type": "single_choice",
+      "title": "Is eating a very full meal before bed usually helpful for falling asleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "A large meal before bed may keep your body busy digesting and affect comfort."
+    },
+    {
+      "id": 30,
+      "type": "single_choice",
+      "title": "Can sleeping in very late on weekends disrupt your usual rhythm?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It might"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Large changes in wake time can make your body rhythm less stable."
+    },
+    {
+      "id": 31,
+      "type": "single_choice",
+      "title": "If you wake up in the middle of the night and cannot sleep, which choice is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Immediately scroll on your phone"
+        },
+        {
+          "id": "B",
+          "text": "Keep stimulation low and wait for sleepiness to return"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Using your phone at night can make you alert again and make it harder to fall back asleep."
+    },
+    {
+      "id": 32,
+      "type": "single_choice",
+      "title": "Can constantly checking the time before bed make you more relaxed?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "It may make you more anxious"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Repeatedly checking the time can increase pressure about not being asleep yet."
+    },
+    {
+      "id": 33,
+      "type": "single_choice",
+      "title": "Can appropriate daytime activity help nighttime sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "It has nothing to do with sleep"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Regular activity can help the body form a better rest rhythm."
+    },
+    {
+      "id": 34,
+      "type": "single_choice",
+      "title": "What kind of lighting is better when you want your body to get ready for rest?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Soft and dim"
+        },
+        {
+          "id": "B",
+          "text": "Very bright and harsh"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Lowering light stimulation before bed helps create a restful atmosphere."
+    },
+    {
+      "id": 35,
+      "type": "single_choice",
+      "title": "Can napping for too long affect falling asleep at night?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It might"
+        },
+        {
+          "id": "B",
+          "text": "Impossible"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Napping too long or too late may reduce sleepiness at night."
+    },
+    {
+      "id": 36,
+      "type": "single_choice",
+      "title": "If you are still dealing with work messages before bed, what may happen to your brain?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It may become more alert"
+        },
+        {
+          "id": "B",
+          "text": "It may immediately calm down"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Work messages can keep your brain thinking and make it harder to relax."
+    },
+    {
+      "id": 37,
+      "type": "single_choice",
+      "title": "When you feel anxious before bed, which approach is more suitable?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Keep scrolling to avoid it"
+        },
+        {
+          "id": "B",
+          "text": "Write down the worry and set it aside for now"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Writing worries down can sometimes help the brain temporarily let go."
+    },
+    {
+      "id": 38,
+      "type": "single_choice",
+      "title": "Alcohol may make people feel sleepy, but does it always improve sleep quality?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "Not necessarily"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Alcohol may make you sleepy, but it can also affect sleep quality later in the night."
+    },
+    {
+      "id": 39,
+      "type": "single_choice",
+      "title": "To reduce bedtime procrastination, which approach is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Decide only at bedtime"
+        },
+        {
+          "id": "B",
+          "text": "Set a fixed bedtime routine in advance"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Planning the routine ahead reduces last-minute hesitation before sleep."
+    },
+    {
+      "id": 40,
+      "type": "single_choice",
+      "title": "Can a warm shower or foot soak before bed help some people relax and fall asleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It may help"
+        },
+        {
+          "id": "B",
+          "text": "It is definitely useless"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A gentle relaxing bedtime habit may help the body move toward rest."
+    },
+    {
+      "id": 41,
+      "type": "single_choice",
+      "title": "What is most important for a sleep plan?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Keep it as stable as possible every day"
+        },
+        {
+          "id": "B",
+          "text": "Decide entirely by mood"
+        },
+        {
+          "id": "C",
+          "text": "Rely only on weekend catch-up sleep"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Stable sleep and wake times are easier to turn into a habit."
+    },
+    {
+      "id": 42,
+      "type": "single_choice",
+      "title": "If you want to watch something before bed, which type is more suitable?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Continuous stimulating short videos"
+        },
+        {
+          "id": "B",
+          "text": "Low-stimulation content that is easy to stop"
+        },
+        {
+          "id": "C",
+          "text": "The more intense, the better"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "The easier the content is to stop and the less stimulating it is, the less likely it is to delay sleep."
+    },
+    {
+      "id": 43,
+      "type": "single_choice",
+      "title": "If it is already very late tonight, which choice is more reasonable?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Start another new video"
+        },
+        {
+          "id": "B",
+          "text": "End this round of use first"
+        },
+        {
+          "id": "C",
+          "text": "Scroll until you fall asleep automatically"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Opening new content often pushes bedtime later."
+    },
+    {
+      "id": 44,
+      "type": "single_choice",
+      "title": "Can exposure to natural light after waking help adjust your routine?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It may help"
+        },
+        {
+          "id": "B",
+          "text": "It is meaningless"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Daylight helps the body distinguish day from night."
+    },
+    {
+      "id": 45,
+      "type": "single_choice",
+      "title": "If you receive many phone notifications before bed, which setting is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Turn on Do Not Disturb or reduce notifications"
+        },
+        {
+          "id": "B",
+          "text": "Let every notification ring"
+        },
+        {
+          "id": "C",
+          "text": "Put the phone by your pillow and wait for messages"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Reducing notifications lowers the chance of being pulled back to your phone."
+    },
+    {
+      "id": 46,
+      "type": "single_choice",
+      "title": "If you keep thinking about tomorrow's tasks before bed, what is a better approach?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Write them down briefly and handle them tomorrow"
+        },
+        {
+          "id": "B",
+          "text": "Lie there and think everything through"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Writing things down can help your brain set them aside for now."
+    },
+    {
+      "id": 47,
+      "type": "single_choice",
+      "title": "If you have been lying down for a long time and still cannot sleep, which choice is better?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Keep anxiously staring at the time"
+        },
+        {
+          "id": "B",
+          "text": "Keep stimulation low and help yourself relax"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Over-focusing on not sleeping may increase pressure."
+    },
+    {
+      "id": 48,
+      "type": "single_choice",
+      "title": "How can preparing tomorrow's things before bed help?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It reduces bedtime worry and repeated checking"
+        },
+        {
+          "id": "B",
+          "text": "It will definitely make you more excited"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Preparing ahead can reduce stray thoughts and unease before sleep."
+    },
+    {
+      "id": 49,
+      "type": "single_choice",
+      "title": "If you often scroll in bed for a long time, what association may your body build?",
+      "options": [
+        {
+          "id": "A",
+          "text": "The bed is a place for being awake and entertained"
+        },
+        {
+          "id": "B",
+          "text": "The bed is only related to sleep"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "If you often scroll in bed, the brain may find it harder to connect bed with sleep."
+    },
+    {
+      "id": 50,
+      "type": "single_choice",
+      "title": "If you suddenly want to watch a new video before bed, which choice better protects your sleep plan?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Do not open new content for now"
+        },
+        {
+          "id": "B",
+          "text": "Watch this one and decide later"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "New content brings new stimulation and can push bedtime later."
+    },
+    {
+      "id": 51,
+      "type": "single_choice",
+      "title": "As bedtime approaches, what kind of reminder is more helpful?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Start bedtime preparation in advance"
+        },
+        {
+          "id": "B",
+          "text": "Force yourself to stop only when the time arrives"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A gradual transition is easier to carry out than a sudden stop."
+    },
+    {
+      "id": 52,
+      "type": "single_choice",
+      "title": "If you still want to move a little close to bedtime, what is more suitable?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Gentle stretching or relaxation"
+        },
+        {
+          "id": "B",
+          "text": "High-intensity exercise to exhaust yourself"
+        },
+        {
+          "id": "C",
+          "text": "Exercise while scrolling to stay alert"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Before bed, low-stimulation gentle movement is more suitable; intense exercise and phone use may make your body or brain more alert."
+    },
+    {
+      "id": 53,
+      "type": "single_choice",
+      "title": "If you feel lonely or empty before bed, which approach is gentler?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Fill the time with endless scrolling"
+        },
+        {
+          "id": "B",
+          "text": "Do a short, low-stimulation calming activity"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "A low-stimulation transition can help you end the day more gently."
+    },
+    {
+      "id": 54,
+      "type": "single_choice",
+      "title": "If you often sleep too late or do not get enough sleep, what is more likely the next day?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Much more energy"
+        },
+        {
+          "id": "B",
+          "text": "More fatigue and lower attention"
+        },
+        {
+          "id": "C",
+          "text": "Coffee completely removes the effect"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Not getting enough sleep may affect your energy and attention the next day, and coffee cannot truly replace sleep."
+    },
+    {
+      "id": 55,
+      "type": "single_choice",
+      "title": "After staying up late, what may happen to your mood the next day?",
+      "options": [
+        {
+          "id": "A",
+          "text": "More stable"
+        },
+        {
+          "id": "B",
+          "text": "More irritable or low"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Sleep loss can make emotional regulation harder."
+    },
+    {
+      "id": 56,
+      "type": "single_choice",
+      "title": "What is one benefit of entering bedtime preparation earlier?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It makes it easier to sleep according to plan"
+        },
+        {
+          "id": "B",
+          "text": "It makes endless procrastination more likely"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A transition period reduces the difficulty of suddenly stopping at bedtime."
+    },
+    {
+      "id": 57,
+      "type": "single_choice",
+      "title": "How may regular sleep help study and work?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It helps maintain attention and efficiency"
+        },
+        {
+          "id": "B",
+          "text": "One good night makes an irregular routine irrelevant"
+        },
+        {
+          "id": "C",
+          "text": "Regular sleep solves all efficiency problems"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Regular sleep usually supports focus and stable energy, but it is not the only factor in efficiency."
+    },
+    {
+      "id": 58,
+      "type": "single_choice",
+      "title": "What can frequent revenge bedtime procrastination lead to?",
+      "options": [
+        {
+          "id": "A",
+          "text": "A brief sense of freedom tonight but more tiredness tomorrow"
+        },
+        {
+          "id": "B",
+          "text": "If it feels good tonight, tomorrow is usually unaffected"
+        },
+        {
+          "id": "C",
+          "text": "Weekend catch-up sleep completely solves it"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Revenge bedtime procrastination may briefly satisfy personal time needs, but it can affect the next day."
+    },
+    {
+      "id": 59,
+      "type": "single_choice",
+      "title": "When sleep-deprived, what may happen to decision-making and impulse control?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Impulses may be harder to control"
+        },
+        {
+          "id": "B",
+          "text": "You will definitely become more disciplined"
+        },
+        {
+          "id": "C",
+          "text": "It only affects the body, not emotions or choices"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Lack of rest can affect mood and self-control, making immediate rewards more tempting."
+    },
+    {
+      "id": 60,
+      "type": "single_choice",
+      "title": "If you want to improve sleep long-term, which is more important?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Going to bed very early once in a while"
+        },
+        {
+          "id": "B",
+          "text": "Keeping a stable routine as much as possible"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Sleep habits depend more on long-term consistency than on one occasional early night."
+    },
+    {
+      "id": 61,
+      "type": "single_choice",
+      "title": "Is drinking a lot of coffee the next day after staying up late the best solution?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes"
+        },
+        {
+          "id": "B",
+          "text": "No"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Caffeine may temporarily boost alertness, but it cannot replace actual sleep."
+    },
+    {
+      "id": 62,
+      "type": "single_choice",
+      "title": "If you sleep very late but still need to get up early, what is the most direct issue?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Your sleep time is compressed"
+        },
+        {
+          "id": "B",
+          "text": "Your sleep time becomes longer"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Late sleep and early wake-up reduce total sleep time and can make you more tired."
+    },
+    {
+      "id": 63,
+      "type": "single_choice",
+      "title": "What may regular sleep mean for physical recovery?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It helps recovery and maintaining body state"
+        },
+        {
+          "id": "B",
+          "text": "If you eat well, sleep does not matter"
+        },
+        {
+          "id": "C",
+          "text": "Occasional short sleep is fine, so long-term sleep does not matter"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Sleep is an important part of recovery; diet and rest matter and cannot fully replace each other."
+    },
+    {
+      "id": 64,
+      "type": "single_choice",
+      "title": "If your sleep time varies greatly every day, what may happen to your body rhythm?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It becomes more stable"
+        },
+        {
+          "id": "B",
+          "text": "It becomes more disrupted"
+        },
+        {
+          "id": "C",
+          "text": "As long as total time is similar, bedtime does not matter"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Large changes in sleep time may make it harder to build stable sleepiness and wake-up rhythms."
+    },
+    {
+      "id": 65,
+      "type": "single_choice",
+      "title": "In the long run, what does sticking to a bedtime lock plan mainly train?",
+      "options": [
+        {
+          "id": "A",
+          "text": "A fixed bedtime habit"
+        },
+        {
+          "id": "B",
+          "text": "A habit of going to bed later"
+        },
+        {
+          "id": "C",
+          "text": "It is only a temporary phone limit and has nothing to do with habits"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Repeating the same bedtime boundary every night makes it easier to build a stable bedtime habit."
+    },
+    {
+      "id": 66,
+      "type": "single_choice",
+      "title": "How can nighttime screen light affect falling asleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It may suppress melatonin and affect circadian rhythm"
+        },
+        {
+          "id": "B",
+          "text": "Only because the phone gets warm"
+        },
+        {
+          "id": "C",
+          "text": "Only because of screen size"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Nighttime light, especially blue light, may affect melatonin and the body's signal that it is time to sleep."
+    },
+    {
+      "id": 67,
+      "type": "single_choice",
+      "title": "What is melatonin mainly related to in sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Directly increasing muscle strength"
+        },
+        {
+          "id": "B",
+          "text": "Making people more excited during the day"
+        },
+        {
+          "id": "C",
+          "text": "Helping the body recognize night and sleepiness signals"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Melatonin is related to circadian rhythm and sleepiness signals; strong light at night can interfere with this process."
+    },
+    {
+      "id": 68,
+      "type": "single_choice",
+      "title": "Why can an irregular routine affect the body?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It makes body rhythms harder to stabilize"
+        },
+        {
+          "id": "B",
+          "text": "It is only psychological"
+        },
+        {
+          "id": "C",
+          "text": "It only affects dinner time"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Large swings in sleep and wake times can make it harder for the body to form a stable rhythm."
+    },
+    {
+      "id": 69,
+      "type": "single_choice",
+      "title": "Besides light, how else can phone use before bed affect sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Stimulating content keeps the brain alert"
+        },
+        {
+          "id": "B",
+          "text": "The phone's weight changes your posture"
+        },
+        {
+          "id": "C",
+          "text": "More screen colors make you fall asleep faster"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Interactive content, short videos, and message feedback keep pulling attention and make the brain harder to calm."
+    },
+    {
+      "id": 70,
+      "type": "single_choice",
+      "title": "When sleep-deprived, why might emotions fluctuate more easily?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It only depends on the weather"
+        },
+        {
+          "id": "B",
+          "text": "Sleeping less definitely makes people happier"
+        },
+        {
+          "id": "C",
+          "text": "Lack of rest affects emotional regulation"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Sleep deprivation may make people more irritable, anxious, or emotionally unstable."
+    },
+    {
+      "id": 71,
+      "type": "single_choice",
+      "title": "What is a reasonable explanation for slower reaction the day after staying up late?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Sleep deprivation affects alertness and reaction speed"
+        },
+        {
+          "id": "B",
+          "text": "It means the body has fully adapted to staying up late"
+        },
+        {
+          "id": "C",
+          "text": "It is only because you skipped breakfast"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "When you do not sleep enough, attention, judgment, and reaction speed may be affected."
+    },
+    {
+      "id": 72,
+      "type": "single_choice",
+      "title": "Why does a fixed wake-up time help sleep habits?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It helps stabilize the body's circadian rhythm"
+        },
+        {
+          "id": "B",
+          "text": "It is just for looking disciplined"
+        },
+        {
+          "id": "C",
+          "text": "It makes sleep unnecessary"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "A fixed wake-up time gives the body a stable time signal and helps regulate the routine."
+    },
+    {
+      "id": 73,
+      "type": "single_choice",
+      "title": "What is a more accurate view of long-term sleep deprivation and health?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Young people do not need to care at all"
+        },
+        {
+          "id": "B",
+          "text": "It only makes people sleepy and does not affect the body"
+        },
+        {
+          "id": "C",
+          "text": "It may increase some chronic health risks"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Long-term sleep deprivation is linked with multiple health risks, though effects vary by person."
+    },
+    {
+      "id": 74,
+      "type": "single_choice",
+      "title": "Why does sleeping late and waking early make you more tired?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Total sleep time is compressed"
+        },
+        {
+          "id": "B",
+          "text": "Sleep quality definitely improves"
+        },
+        {
+          "id": "C",
+          "text": "The air is heavier in the morning"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "If wake time does not change, going to bed late directly reduces available sleep time."
+    },
+    {
+      "id": 75,
+      "type": "single_choice",
+      "title": "What role does sleep play in memory and learning?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It only affects physical energy, not the brain"
+        },
+        {
+          "id": "B",
+          "text": "It clears all memories"
+        },
+        {
+          "id": "C",
+          "text": "It helps learning and memory consolidation"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Sleep supports learning and long-term memory formation; lack of sleep may affect thinking and focus."
+    },
+    {
+      "id": 76,
+      "type": "single_choice",
+      "title": "Why can sleep deprivation make you want to keep using your phone more?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Self-control and emotion regulation may weaken, making immediate rewards more appealing"
+        },
+        {
+          "id": "B",
+          "text": "Because the phone signal becomes stronger"
+        },
+        {
+          "id": "C",
+          "text": "Because the screen automatically looks better"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "When under-rested, people may seek immediate feedback more strongly, making it harder to stop scrolling."
+    },
+    {
+      "id": 77,
+      "type": "single_choice",
+      "title": "Why can repeatedly checking messages before bed affect sleep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "More messages make the brain more relaxed"
+        },
+        {
+          "id": "B",
+          "text": "Reading messages does not use attention"
+        },
+        {
+          "id": "C",
+          "text": "The brain keeps processing social and task information"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Messages bring new tasks, emotions, or expectations, keeping the brain active."
+    },
+    {
+      "id": 78,
+      "type": "single_choice",
+      "title": "What is one benefit of following a sleep plan with a friend?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It is easier to get reminders and support"
+        },
+        {
+          "id": "B",
+          "text": "You will definitely never sleep late again"
+        },
+        {
+          "id": "C",
+          "text": "It has no effect at all"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Doing it with someone else can create external reminders and motivation to persist."
+    },
+    {
+      "id": 79,
+      "type": "single_choice",
+      "title": "Why can doing a new habit with someone else make it easier to keep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Because your friend can sleep for you"
+        },
+        {
+          "id": "B",
+          "text": "Because you no longer need any effort"
+        },
+        {
+          "id": "C",
+          "text": "It increases companionship and commitment"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "A friend cannot complete the habit for you, but can provide reminders, support, and some accountability."
+    },
+    {
+      "id": 80,
+      "type": "single_choice",
+      "title": "How should friend supervision for a sleep plan be understood?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Mutual punishment"
+        },
+        {
+          "id": "B",
+          "text": "Mutual control"
+        },
+        {
+          "id": "C",
+          "text": "Mutual support"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Good supervision is not control; it helps both sides do what they want to do more easily."
+    },
+    {
+      "id": 81,
+      "type": "single_choice",
+      "title": "When you want to unlock temporarily, what can knowing a friend will be notified do?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Help you pause and reconsider whether you really need to unlock"
+        },
+        {
+          "id": "B",
+          "text": "Make unlocking completely impossible"
+        },
+        {
+          "id": "C",
+          "text": "Let your friend decide for you"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "The notification adds a pause and a sense of responsibility, not a total loss of choice."
+    },
+    {
+      "id": 82,
+      "type": "single_choice",
+      "title": "What problem is friend supervision best suited to help with?",
+      "options": [
+        {
+          "id": "A",
+          "text": "You want to sleep early but waver at bedtime"
+        },
+        {
+          "id": "B",
+          "text": "All sleep problems"
+        },
+        {
+          "id": "C",
+          "text": "Problems that do not require sleep"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Friend supervision helps with execution, but it is not a substitute for professional sleep treatment."
+    },
+    {
+      "id": 83,
+      "type": "single_choice",
+      "title": "If your friend is also following a sleep plan, what feeling are you more likely to have?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Sleep does not need management at all"
+        },
+        {
+          "id": "B",
+          "text": "You must be perfect and never fail"
+        },
+        {
+          "id": "C",
+          "text": "You are not doing this alone"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Doing it together can provide companionship and reduce the feeling that you are the only one trying."
+    },
+    {
+      "id": 84,
+      "type": "single_choice",
+      "title": "Why is the bedtime habit suitable for a supervision friend?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Bedtime is when people often relax their guard and may need a little external reminder"
+        },
+        {
+          "id": "B",
+          "text": "Because people definitely have no self-control at bedtime"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Bedtime can be affected by fatigue and mood, so gentle external reminders may help."
+    },
+    {
+      "id": 85,
+      "type": "single_choice",
+      "title": "Why might telling a friend 'I will sleep earlier tonight' help?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Once you promise, you definitely will not fail"
+        },
+        {
+          "id": "B",
+          "text": "It makes the goal more concrete and easier to remember"
+        },
+        {
+          "id": "C",
+          "text": "The promise is more important than sleep itself"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Speaking the goal out loud can make you more aware that it is tonight's plan."
+    },
+    {
+      "id": 86,
+      "type": "single_choice",
+      "title": "If someone often procrastinates at bedtime, what can friend supervision provide?",
+      "options": [
+        {
+          "id": "A",
+          "text": "External reminders and light accountability"
+        },
+        {
+          "id": "B",
+          "text": "A complete solution to all procrastination"
+        },
+        {
+          "id": "C",
+          "text": "Freedom from making any decisions"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "External supervision can support action, but the user still needs to carry it out."
+    },
+    {
+      "id": 87,
+      "type": "single_choice",
+      "title": "What impact can seeing a friend is already locked have in the friend list?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It has nothing to do with your behavior"
+        },
+        {
+          "id": "B",
+          "text": "It makes you fall asleep immediately"
+        },
+        {
+          "id": "C",
+          "text": "It can motivate you to start locking too"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "Seeing a friend follow the plan may create positive peer influence."
+    },
+    {
+      "id": 88,
+      "type": "single_choice",
+      "title": "If a user does not want to invite friends, can they still build a bedtime habit alone?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Yes, friend supervision is only support"
+        },
+        {
+          "id": "B",
+          "text": "No, without friends one cannot sleep early"
+        },
+        {
+          "id": "C",
+          "text": "Many people must supervise for it to work"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Solo use can also build habits; friend supervision just makes persistence more likely."
+    },
+    {
+      "id": 89,
+      "type": "single_choice",
+      "title": "Which statement is closest to the meaning of mutual supervision?",
+      "options": [
+        {
+          "id": "A",
+          "text": "I manage your life"
+        },
+        {
+          "id": "B",
+          "text": "We keep the plan together"
+        },
+        {
+          "id": "C",
+          "text": "Your failures should be public"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Mutual supervision is about sticking with the plan together, not control or public judgment."
+    },
+    {
+      "id": 90,
+      "type": "single_choice",
+      "title": "When trying to build a new habit, how can telling a friend your goal help?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It makes the goal more concrete and easier to keep"
+        },
+        {
+          "id": "B",
+          "text": "The goal completes itself"
+        },
+        {
+          "id": "C",
+          "text": "You no longer need any effort"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Saying the goal out loud can create commitment, but you still need to act."
+    },
+    {
+      "id": 91,
+      "type": "single_choice",
+      "title": "If a friend can see your small daily progress, what may happen?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It is completely meaningless"
+        },
+        {
+          "id": "B",
+          "text": "It can create a little accountability"
+        },
+        {
+          "id": "C",
+          "text": "It will definitely make you overwhelmed"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Appropriately visible progress may help people take their goals more seriously."
+    },
+    {
+      "id": 92,
+      "type": "single_choice",
+      "title": "When building a habit, which approach is easier to keep?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Only think about it in your head"
+        },
+        {
+          "id": "B",
+          "text": "Rely entirely on your mood"
+        },
+        {
+          "id": "C",
+          "text": "Set a clear goal and involve others"
+        }
+      ],
+      "answers": [
+        "C"
+      ],
+      "explanation": "A clear goal plus external support makes steady action easier."
+    },
+    {
+      "id": 93,
+      "type": "single_choice",
+      "title": "Why can checking in together help?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Because others can complete it for you"
+        },
+        {
+          "id": "B",
+          "text": "Because a shared rhythm increases persistence"
+        },
+        {
+          "id": "C",
+          "text": "Because check-ins are more important than the goal"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "The value of checking in together is building rhythm and companionship, not the form itself."
+    },
+    {
+      "id": 94,
+      "type": "single_choice",
+      "title": "When only you know a goal, what is more likely to happen?",
+      "options": [
+        {
+          "id": "A",
+          "text": "It may be easier to quietly give up"
+        },
+        {
+          "id": "B",
+          "text": "It will definitely be completed better"
+        },
+        {
+          "id": "C",
+          "text": "The goal becomes simpler"
+        }
+      ],
+      "answers": [
+        "A"
+      ],
+      "explanation": "Without external reminders, people are more likely to give up or delay when they are not in a good state."
+    },
+    {
+      "id": 95,
+      "type": "single_choice",
+      "title": "Which approach is more suitable for building a long-term habit?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Do a lot once, then leave the rest to chance"
+        },
+        {
+          "id": "B",
+          "text": "Take small steps consistently and get appropriate feedback"
+        },
+        {
+          "id": "C",
+          "text": "Only act when you feel motivated"
+        }
+      ],
+      "answers": [
+        "B"
+      ],
+      "explanation": "Habits rely more on repetition and feedback than on one intense effort."
+    }
+  ]
+}

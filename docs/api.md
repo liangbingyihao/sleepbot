@@ -19,7 +19,13 @@
   - [3.2 处理好友申请](#3-2-处理好友申请)
   - [3.3 获取收到的好友申请](#3-3-获取收到的好友申请)
   - [3.4 获取发出的好友申请](#3-4-获取发出的好友申请)
-  - [3.5 获取好友列表](#3-5-获取好友列表)
+  - [3.5 修改好友备注](#3-5-修改好友备注)
+  - [3.6 删除好友关系](#3-6-删除好友关系)
+   - [3.7 获取好友列表](#3-7-获取好友列表)
+   - [3.8 解锁题库](#3-8-解锁题库)
+     - [3.8.1 获取配置](#3-8-1-获取配置)
+     - [3.8.2 更新配置](#3-8-2-更新配置)
+     - [3.8.3 随机抽题](#3-8-3-随机抽题)
 
 ---
 
@@ -234,9 +240,13 @@ POST /friends/requests
 ```json
 {
   "to_user_id": "target_user_id",
+  "from_name": "张三",
+  "to_name": "李四",
   "apply_message": "一起监督早睡早起！"
 }
 ```
+
+`to_user_id` 必填。`from_name`（对方将看到的你的备注）、`to_name`（你将看到的对方的备注）、`apply_message` 均为可选。
 
 **响应示例**:
 ```json
@@ -246,8 +256,10 @@ POST /friends/requests
     "id": 1,
     "from_user_id": "user123",
     "to_user_id": "target_user_id",
-    "status": "pending",
+    "status": "accepted",
     "apply_message": "一起监督早睡早起！",
+    "from_name": "张三",
+    "to_name": "李四",
     "created_at": "2026-05-25 10:00:00",
     "updated_at": "2026-05-25 10:00:00"
   }
@@ -332,7 +344,58 @@ GET /friends/requests/outgoing
 }
 ```
 
-### 3.5 获取好友列表
+### 3.5 修改好友备注
+
+```
+PATCH /friends/<friendship_id>/name
+```
+
+**请求体**:
+```json
+{
+  "name": "小张"
+}
+```
+
+当前用户为 `from_user` 时修改 `to_name`，为 `to_user` 时修改 `from_name`。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "id": 1,
+    "from_user_id": "user123",
+    "to_user_id": "friend_user_id",
+    "status": "accepted",
+    "apply_message": "",
+    "from_name": "",
+    "to_name": "小张",
+    "created_at": "2026-05-25 10:00:00",
+    "updated_at": "2026-05-25 10:00:00"
+  }
+}
+```
+
+### 3.6 删除好友关系
+
+```
+DELETE /friends/<friendship_id>
+```
+
+任一方均可删除。逻辑删除，好友列表中不再显示。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "msg": "删除成功"
+  }
+}
+```
+
+### 3.7 获取好友列表
 
 ```
 GET /friends
@@ -346,6 +409,7 @@ GET /friends
     {
       "friendship_id": 1,
       "user_id": "friend_user_id",
+      "friend_name": "小张",
       "apply_message": "",
       "created_at": "2026-05-25 10:00:00",
       "sleep_config": {
@@ -358,5 +422,93 @@ GET /friends
       }
     }
   ]
+}
+```
+
+### 3.8 解锁题库
+
+题库以 JSON 格式存储在 `app_config` 表中，`config_type = 'quiz_questions'`，每条记录对应一种语言。题目字段包括 `type`（single_choice / multiple_choice）、`title`、`options[]`（含 `id`、`text`）、`answers`（正确答案 ID 数组）、`explanation`。
+
+#### 3.8.1 获取配置
+
+```
+GET /configs/<config_type>?locale=zh-CN
+```
+
+`locale` 可选，默认从 `X-Language` 请求头读取；未匹配时回退到 `locale=''` 的记录。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "id": 1,
+    "config_type": "quiz_questions",
+    "locale": "zh-CN",
+    "data": {
+      "questions": [
+        {
+          "id": 1,
+          "type": "single_choice",
+          "title": "睡眠的黄金时间段是？",
+          "options": [
+            {"id": 1, "text": "22:00-06:00"},
+            {"id": 2, "text": "00:00-08:00"},
+            {"id": 3, "text": "02:00-10:00"},
+            {"id": 4, "text": "23:00-07:00"}
+          ],
+          "answers": [1],
+          "explanation": "人体褪黑素分泌高峰期在22:00-06:00"
+        }
+      ]
+    },
+    "version": 1,
+    "created_at": "2026-05-25 10:00:00",
+    "updated_at": "2026-05-25 10:00:00"
+  }
+}
+```
+
+#### 3.8.2 更新配置
+
+```
+PUT /configs/<config_type>?locale=zh-CN
+```
+
+**请求体**: 直接传入 JSON 对象作为 `data` 字段的值。
+
+```json
+{
+  "questions": [...]
+}
+```
+
+**响应**: 同获取接口。
+
+#### 3.8.3 随机抽题
+
+```
+GET /quiz/random?locale=zh-CN
+```
+
+从 `config_type = 'quiz_questions'` 的配置中随机返回一道题。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "id": 1,
+    "type": "single_choice",
+    "title": "睡眠的黄金时间段是？",
+    "options": [
+      {"id": 1, "text": "22:00-06:00"},
+      {"id": 2, "text": "00:00-08:00"},
+      {"id": 3, "text": "02:00-10:00"},
+      {"id": 4, "text": "23:00-07:00"}
+    ],
+    "answers": [1],
+    "explanation": "人体褪黑素分泌高峰期在22:00-06:00"
+  }
 }
 ```

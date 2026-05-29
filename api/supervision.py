@@ -21,6 +21,9 @@ def send_friend_request(user_id):
     if to_user_id == user_id:
         abort(400, '不能向自己发送好友申请')
 
+    from_name = (data.get('from_name') or '').strip()
+    to_name = (data.get('to_name') or '').strip()
+
     existing = Friendship.query.filter(
         db.or_(
             db.and_(Friendship.from_user_id == user_id, Friendship.to_user_id == to_user_id),
@@ -40,11 +43,32 @@ def send_friend_request(user_id):
         from_user_id=user_id,
         to_user_id=to_user_id,
         apply_message=apply_message,
+        from_name=from_name,
+        to_name=to_name,
+        status="accepted"
     )
     db.session.add(friendship)
     db.session.commit()
 
     return ok(friendship.to_dict())
+
+
+@supervision_bp.route('/friends/<int:friendship_id>', methods=['DELETE'])
+@require_user_id
+def delete_friendship(user_id, friendship_id):
+    friendship = Friendship.query.get(friendship_id)
+    if not friendship:
+        abort(404, '好友关系不存在')
+
+    if friendship.from_user_id != user_id and friendship.to_user_id != user_id:
+        abort(403, '无权操作')
+
+    if friendship.status == 'deleted':
+        abort(400, '该好友关系已被删除')
+
+    friendship.status = 'deleted'
+    db.session.commit()
+    return ok({'msg': '删除成功'})
 
 
 @supervision_bp.route('/friends/requests/<int:request_id>/respond', methods=['POST'])
@@ -77,8 +101,9 @@ def respond_friend_request(user_id, request_id):
 @supervision_bp.route('/friends/requests/incoming', methods=['GET'])
 @require_user_id
 def get_incoming_requests(user_id):
-    requests = Friendship.query.filter_by(
-        to_user_id=user_id, status='pending'
+    requests = Friendship.query.filter(
+        Friendship.to_user_id == user_id,
+        Friendship.status == 'pending',
     ).order_by(Friendship.created_at.desc()).all()
 
     return ok([r.to_dict() for r in requests])
@@ -87,11 +112,41 @@ def get_incoming_requests(user_id):
 @supervision_bp.route('/friends/requests/outgoing', methods=['GET'])
 @require_user_id
 def get_outgoing_requests(user_id):
-    requests = Friendship.query.filter_by(
-        from_user_id=user_id, status='pending'
+    requests = Friendship.query.filter(
+        Friendship.from_user_id == user_id,
+        Friendship.status == 'pending',
     ).order_by(Friendship.created_at.desc()).all()
 
     return ok([r.to_dict() for r in requests])
+
+
+@supervision_bp.route('/friends/<int:friendship_id>/name', methods=['PATCH'])
+@require_user_id
+def update_friend_name(user_id, friendship_id):
+    friendship = Friendship.query.get(friendship_id)
+    if not friendship:
+        abort(404, '好友关系不存在')
+
+    if friendship.status == 'deleted':
+        abort(400, '该好友关系已被删除')
+
+    data = request.get_json()
+    if not data:
+        abort(400, '请求体不能为空')
+
+    name = data.get('name', '').strip()
+    if not name:
+        abort(400, 'name 为必填')
+
+    if friendship.from_user_id == user_id:
+        friendship.to_name = name
+    elif friendship.to_user_id == user_id:
+        friendship.from_name = name
+    else:
+        abort(403, '无权操作')
+
+    db.session.commit()
+    return ok(friendship.to_dict())
 
 
 @supervision_bp.route('/friends', methods=['GET'])
@@ -106,7 +161,12 @@ def get_friends(user_id):
 
     result = []
     for f in friendships:
-        friend_id = f.to_user_id if f.from_user_id == user_id else f.from_user_id
+        if f.from_user_id == user_id:
+            friend_id = f.to_user_id
+            friend_name = f.to_name or friend_id
+        else:
+            friend_id = f.from_user_id
+            friend_name = f.from_name or friend_id
 
         sleep_config = SleepConfig.query.filter_by(user_id=friend_id).first()
         latest_status = UserStatus.query \
@@ -117,6 +177,7 @@ def get_friends(user_id):
         result.append({
             'friendship_id': f.id,
             'user_id': friend_id,
+            'friend_name': friend_name,
             'apply_message': f.apply_message if f.from_user_id != user_id else '',
             'created_at': f.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'sleep_config': sleep_config.to_dict() if sleep_config else None,
