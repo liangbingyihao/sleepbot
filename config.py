@@ -19,3 +19,13 @@ class Config:
         f'?charset=utf8mb4'
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    OSS_ACCESS_KEY_ID = os.getenv('OSS_ACCESS_KEY_ID', '')
+    OSS_ACCESS_KEY_SECRET = os.getenv('OSS_ACCESS_KEY_SECRET', '')
+    OSS_ENDPOINT_CN = os.getenv('OSS_ENDPOINT_CN', '')
+    OSS_ENDPOINT_SG = os.getenv('OSS_ENDPOINT_SG', '')
+    OSS_BUCKET_CN = os.getenv('OSS_BUCKET_CN', 'cn-bucket')
+    OSS_BUCKET_SG = os.getenv('OSS_BUCKET_SG', 'sg-bucket')
+    ASSET_SESSION_TTL = int(os.getenv('ASSET_SESSION_TTL', '86400'))
+
+    UPLOAD_BASE_URL = os.getenv('UPLOAD_BASE_URL', 'http://localhost:5050')

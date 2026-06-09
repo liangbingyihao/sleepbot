@@ -6,26 +6,36 @@
   - [公共请求头](#公共请求头)
   - [响应格式](#响应格式)
   - [错误码说明](#错误码说明)
-- [1. 用户睡眠时间配置](#1-用户睡眠时间配置)
-  - [1.1 获取当前用户睡眠配置](#1-1-获取当前用户睡眠配置)
-  - [1.2 设置/更新睡眠配置](#1-2-设置-更新睡眠配置)
-  - [1.3 删除睡眠配置](#1-3-删除睡眠配置)
-- [2. 用户状态上报](#2-用户状态上报)
-  - [2.1 上报状态](#2-1-上报状态)
-  - [2.2 获取最新状态](#2-2-获取最新状态)
-  - [2.3 获取状态历史](#2-3-获取状态历史)
-- [3. 好友监督关系管理](#3-好友监督关系管理)
-  - [3.1 发送好友申请](#3-1-发送好友申请)
-  - [3.2 处理好友申请](#3-2-处理好友申请)
-  - [3.3 获取收到的好友申请](#3-3-获取收到的好友申请)
-  - [3.4 获取发出的好友申请](#3-4-获取发出的好友申请)
-  - [3.5 修改好友备注](#3-5-修改好友备注)
-  - [3.6 删除好友关系](#3-6-删除好友关系)
-   - [3.7 获取好友列表](#3-7-获取好友列表)
-   - [3.8 解锁题库](#3-8-解锁题库)
-     - [3.8.1 获取配置](#3-8-1-获取配置)
-     - [3.8.2 更新配置](#3-8-2-更新配置)
-     - [3.8.3 随机抽题](#3-8-3-随机抽题)
+- [1. 用户基本信息](#1-用户基本信息)
+  - [1.1 获取用户信息](#1-1-获取用户信息)
+  - [1.2 初始化用户信息](#1-2-初始化用户信息)
+  - [1.3 修改昵称](#1-3-修改昵称)
+- [2. 用户睡眠时间配置](#2-用户睡眠时间配置)
+  - [2.1 获取当前用户睡眠配置](#2-1-获取当前用户睡眠配置)
+  - [2.2 设置/更新睡眠配置](#2-2-设置-更新睡眠配置)
+  - [2.3 删除睡眠配置](#2-3-删除睡眠配置)
+- [3. 用户状态上报](#3-用户状态上报)
+  - [3.1 上报状态](#3-1-上报状态)
+  - [3.2 获取最新状态](#3-2-获取最新状态)
+  - [3.3 获取状态历史](#3-3-获取状态历史)
+- [4. 好友监督关系管理](#4-好友监督关系管理)
+  - [4.1 发送好友申请](#4-1-发送好友申请)
+  - [4.2 处理好友申请](#4-2-处理好友申请)
+  - [4.3 获取收到的好友申请](#4-3-获取收到的好友申请)
+  - [4.4 获取发出的好友申请](#4-4-获取发出的好友申请)
+  - [4.5 修改好友备注](#4-5-修改好友备注)
+  - [4.6 删除好友关系](#4-6-删除好友关系)
+   - [4.7 获取好友列表](#4-7-获取好友列表)
+   - [4.8 解锁题库](#4-8-解锁题库)
+     - [4.8.1 获取配置](#4-8-1-获取配置)
+     - [4.8.2 更新配置](#4-8-2-更新配置)
+     - [4.8.3 随机抽题](#4-8-3-随机抽题)
+- [5. 早睡鼓励素材](#5-早睡鼓励素材)
+  - [5.1 生成上传 Session](#5-1-生成上传-session)
+  - [5.2 素材采集页面](#5-2-素材采集页面)
+  - [5.3 提交素材](#5-3-提交素材)
+  - [5.4 获取收到的素材](#5-4-获取收到的素材)
+  - [5.5 审核素材](#5-5-审核素材)
 
 ---
 
@@ -77,9 +87,71 @@ HTTP 状态码: 200
 
 ---
 
-## 1. 用户睡眠时间配置
+## 1. 用户基本信息
 
-### 1.1 获取当前用户睡眠配置
+### 1.1 获取用户信息
+
+```
+GET /profile
+```
+
+**请求头**: `X-User-Id` 必填。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "id": 1,
+    "user_id": "user123",
+    "nickname": "张三",
+    "region": "中国",
+    "source_code": "ABC123",
+    "created_at": "2026-05-25 10:00:00",
+    "updated_at": "2026-05-25 10:00:00"
+  }
+}
+```
+
+### 1.2 初始化用户信息
+
+```
+POST /profile
+```
+
+**请求体**:
+```json
+{
+  "nickname": "张三",
+  "region": "中国",
+  "source_code": "ABC123"
+}
+```
+
+所有字段可选。`source_code` 为用户输入的其他用户的邀请码。
+
+**响应示例**: 同获取接口。
+
+### 1.3 修改昵称
+
+```
+PATCH /profile/nickname
+```
+
+**请求体**:
+```json
+{
+  "nickname": "新昵称"
+}
+```
+
+**响应示例**: 同获取接口。
+
+---
+
+## 2. 用户睡眠时间配置
+
+### 2.1 获取当前用户睡眠配置
 
 ```
 GET /config
@@ -101,7 +173,7 @@ GET /config
 }
 ```
 
-### 1.2 设置/更新睡眠配置
+### 2.2 设置/更新睡眠配置
 
 ```
 POST /config
@@ -134,7 +206,7 @@ POST /config
 }
 ```
 
-### 1.3 删除睡眠配置
+### 2.3 删除睡眠配置
 
 ```
 DELETE /config
@@ -150,9 +222,9 @@ DELETE /config
 
 ---
 
-## 2. 用户状态上报
+## 3. 用户状态上报
 
-### 2.1 上报状态
+### 3.1 上报状态
 
 ```
 POST /status
@@ -180,7 +252,7 @@ POST /status
 }
 ```
 
-### 2.2 获取最新状态
+### 3.2 获取最新状态
 
 ```
 GET /status/latest
@@ -199,7 +271,7 @@ GET /status/latest
 }
 ```
 
-### 2.3 获取状态历史
+### 3.3 获取状态历史
 
 ```
 GET /status/history?page=1&per_page=20
@@ -228,9 +300,9 @@ GET /status/history?page=1&per_page=20
 
 ---
 
-## 3. 好友监督关系管理
+## 4. 好友监督关系管理
 
-### 3.1 发送好友申请
+### 4.1 发送好友申请
 
 ```
 POST /friends/requests
@@ -266,7 +338,7 @@ POST /friends/requests
 }
 ```
 
-### 3.2 处理好友申请
+### 4.2 处理好友申请
 
 ```
 POST /friends/requests/<request_id>/respond
@@ -296,7 +368,7 @@ POST /friends/requests/<request_id>/respond
 }
 ```
 
-### 3.3 获取收到的好友申请
+### 4.3 获取收到的好友申请
 
 ```
 GET /friends/requests/incoming
@@ -320,7 +392,7 @@ GET /friends/requests/incoming
 }
 ```
 
-### 3.4 获取发出的好友申请
+### 4.4 获取发出的好友申请
 
 ```
 GET /friends/requests/outgoing
@@ -344,7 +416,7 @@ GET /friends/requests/outgoing
 }
 ```
 
-### 3.5 修改好友备注
+### 4.5 修改好友备注
 
 ```
 PATCH /friends/<friendship_id>/name
@@ -377,7 +449,7 @@ PATCH /friends/<friendship_id>/name
 }
 ```
 
-### 3.6 删除好友关系
+### 4.6 删除好友关系
 
 ```
 DELETE /friends/<friendship_id>
@@ -395,7 +467,7 @@ DELETE /friends/<friendship_id>
 }
 ```
 
-### 3.7 获取好友列表
+### 4.7 获取好友列表
 
 ```
 GET /friends
@@ -425,11 +497,11 @@ GET /friends
 }
 ```
 
-### 3.8 解锁题库
+### 4.8 解锁题库
 
 题库以 JSON 格式存储在 `app_config` 表中，`config_type = 'quiz_questions'`，每条记录对应一种语言。题目字段包括 `type`（single_choice / multiple_choice）、`title`、`options[]`（含 `id`、`text`）、`answers`（正确答案 ID 数组）、`explanation`。
 
-#### 3.8.1 获取配置
+#### 4.8.1 获取配置
 
 ```
 GET /configs/<config_type>?locale=zh-CN
@@ -469,7 +541,7 @@ GET /configs/<config_type>?locale=zh-CN
 }
 ```
 
-#### 3.8.2 更新配置
+#### 4.8.2 更新配置
 
 ```
 PUT /configs/<config_type>?locale=zh-CN
@@ -485,7 +557,7 @@ PUT /configs/<config_type>?locale=zh-CN
 
 **响应**: 同获取接口。
 
-#### 3.8.3 随机抽题
+#### 4.8.3 随机抽题
 
 ```
 GET /quiz/random?locale=zh-CN
@@ -512,3 +584,130 @@ GET /quiz/random?locale=zh-CN
   }
 }
 ```
+
+## 5. 早睡鼓励素材
+
+### 5.1 生成上传 Session
+
+```
+POST /assets/session
+```
+
+**请求头**: `X-User-Id` 必填。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "session_id": "a1b2c3d4-...",
+    "url": "http://localhost:5050/api/sleep/assets/upload/a1b2c3d4-...",
+    "expires_at": "2026-05-26 10:00:00"
+  }
+}
+```
+
+`url` 为采集页面链接，可分享给好友。有效期在服务端配置（默认 24 小时）。
+
+### 5.2 素材采集页面
+
+```
+GET /assets/upload/<session_id>
+```
+
+好友在浏览器打开此链接，可看到上传表单。session 过期后页面显示「链接已过期」。
+
+### 5.3 提交素材
+
+```
+POST /assets/upload/<session_id>
+```
+
+**Content-Type**: `multipart/form-data`
+
+| 字段 | 说明 |
+|---|---|
+| `friend_name` | 好友昵称，必填 |
+| `type` | 素材类型：`image`、`audio`、`text` |
+| `file` | 文件（type 为 image/audio 时必填） |
+| `content` | 文字内容（type 为 text 时必填） |
+
+支持的图片格式：JPEG、PNG、GIF、WebP。支持的音频格式：MP3、M4A、WAV、OGG。文件最大 20MB。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "msg": "上传成功，感谢你的鼓励！"
+  }
+}
+```
+
+### 5.4 获取收到的素材
+
+```
+GET /assets/materials
+```
+
+**请求头**: `X-User-Id` 必填。
+
+返回当前用户收到的所有素材，按时间倒序。图片和音频会附带 `presigned_url`（有效期 15 分钟）。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": [
+    {
+      "id": 1,
+      "user_id": "user123",
+      "session_id": "a1b2c3d4-...",
+      "friend_name": "小明",
+      "file_type": "image",
+      "bucket": "cn-bucket",
+      "object_key": "assets/user123/session/uuid.jpg",
+      "content_text": "",
+      "file_size": 102400,
+      "mime_type": "image/jpeg",
+      "status": "pending",
+      "presigned_url": "https://...",
+      "created_at": "2026-05-25 10:00:00",
+      "updated_at": "2026-05-25 10:00:00"
+    },
+    {
+      "id": 2,
+      "user_id": "user123",
+      "session_id": "a1b2c3d4-...",
+      "friend_name": "小红",
+      "file_type": "text",
+      "bucket": "",
+      "object_key": "",
+      "content_text": "早点休息哦！",
+      "file_size": 0,
+      "mime_type": "text/plain",
+      "status": "approved",
+      "presigned_url": null,
+      "created_at": "2026-05-25 10:00:00",
+      "updated_at": "2026-05-25 10:00:00"
+    }
+  ]
+}
+```
+
+### 5.5 审核素材
+
+```
+PATCH /assets/materials/<material_id>/status
+```
+
+**请求体**:
+```json
+{
+  "status": "approved"
+}
+```
+
+`status` 可选值：`approved`（采用）、`rejected`（丢弃）。只能审核状态为 `pending` 的素材。
+
+**响应示例**: 同素材对象。

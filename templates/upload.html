@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>给好友的鼓励</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 40px 32px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 8px; }
+  p.desc { color: #666; font-size: 14px; margin-bottom: 24px; }
+  .expired-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
+  .expired-text { color: #999; font-size: 15px; }
+  .form-group { margin-bottom: 16px; text-align: left; }
+  label { display: block; font-size: 14px; color: #333; margin-bottom: 4px; font-weight: 500; }
+  input[type=text], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s;
+  }
+  input[type=text]:focus, textarea:focus { border-color: #4a90d9; }
+  textarea { resize: vertical; min-height: 80px; }
+  .type-selector { display: flex; gap: 8px; margin-bottom: 16px; }
+  .type-btn {
+    flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px;
+    background: #fafafa; cursor: pointer; font-size: 14px; transition: all 0.2s;
+  }
+  .type-btn:hover { border-color: #aaa; }
+  .type-btn.active { border-color: #4a90d9; background: #e8f0fe; color: #4a90d9; font-weight: 600; }
+  .file-input { display: none; }
+  .file-label {
+    display: block; padding: 20px; border: 2px dashed #ddd; border-radius: 8px;
+    cursor: pointer; color: #999; font-size: 14px; transition: all 0.2s;
+  }
+  .file-label:hover { border-color: #4a90d9; color: #4a90d9; }
+  .file-label.has-file { border-color: #4a90d9; background: #e8f0fe; color: #4a90d9; }
+  .submit-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: #4a90d9; color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: background 0.2s; margin-top: 8px;
+  }
+  .submit-btn:hover { background: #357abd; }
+  .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
+  .msg.success { display: block; background: #e6f7e6; color: #2e7d32; }
+  .msg.error { display: block; background: #fdecea; color: #c62828; }
+</style>
+</head>
+<body>
+<div class="card">
+{% if expired %}
+  <div class="expired-icon">⏰</div>
+  <h1>链接已过期</h1>
+  <p class="expired-text">该素材收集链接已失效，请联系你的好友重新生成。</p>
+{% else %}
+  <h1>给好友的睡前鼓励</h1>
+  <p class="desc">你的好友正在努力早睡，送上一份鼓励吧！</p>
+
+  <form id="uploadForm" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>你的昵称</label>
+      <input type="text" name="friend_name" placeholder="请输入你的名字" required>
+    </div>
+
+    <div class="type-selector">
+      <button type="button" class="type-btn active" data-type="image">图片</button>
+      <button type="button" class="type-btn" data-type="audio">录音</button>
+      <button type="button" class="type-btn" data-type="text">文字</button>
+    </div>
+
+    <div id="fileSection">
+      <label class="file-label" id="fileLabel">
+        <span id="fileText">点击选择图片</span>
+      </label>
+      <input type="file" class="file-input" id="fileInput" accept="image/*" name="file">
+    </div>
+
+    <div id="textSection" style="display:none;">
+      <div class="form-group">
+        <label>鼓励的话</label>
+        <textarea name="content" placeholder="写一段话鼓励你的好友吧..."></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">发送鼓励</button>
+  </form>
+
+  <div class="msg" id="msg"></div>
+{% endif %}
+</div>
+
+<script>
+(function() {
+  {% if not expired %}
+  var form = document.getElementById('uploadForm');
+  var typeBtns = document.querySelectorAll('.type-btn');
+  var fileSection = document.getElementById('fileSection');
+  var textSection = document.getElementById('textSection');
+  var fileInput = document.getElementById('fileInput');
+  var fileLabel = document.getElementById('fileLabel');
+  var fileText = document.getElementById('fileText');
+  var msg = document.getElementById('msg');
+  var submitBtn = document.getElementById('submitBtn');
+
+  function getCurrentType() {
+    return document.querySelector('.type-btn.active').dataset.type;
+  }
+
+  typeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      typeBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var t = btn.dataset.type;
+      if (t === 'text') {
+        fileSection.style.display = 'none';
+        textSection.style.display = 'block';
+      } else {
+        fileSection.style.display = 'block';
+        textSection.style.display = 'none';
+        fileInput.accept = t === 'image' ? 'image/*' : 'audio/*';
+        fileText.textContent = t === 'image' ? '点击选择图片' : '点击选择录音文件';
+        fileLabel.classList.remove('has-file');
+      }
+    });
+  });
+
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length > 0) {
+      fileLabel.classList.add('has-file');
+      fileText.textContent = fileInput.files[0].name;
+    } else {
+      fileLabel.classList.remove('has-file');
+      fileText.textContent = getCurrentType() === 'image' ? '点击选择图片' : '点击选择录音文件';
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    msg.className = 'msg';
+    msg.style.display = 'none';
+    submitBtn.disabled = true;
+
+    var fd = new FormData();
+    fd.append('friend_name', form.querySelector('[name=friend_name]').value.trim());
+    fd.append('type', getCurrentType());
+
+    if (getCurrentType() === 'text') {
+      var content = form.querySelector('[name=content]').value.trim();
+      if (!content) {
+        showError('请输入鼓励的文字内容');
+        submitBtn.disabled = false;
+        return;
+      }
+      fd.append('content', content);
+    } else {
+      var file = fileInput.files[0];
+      if (!file) {
+        showError('请选择一个文件');
+        submitBtn.disabled = false;
+        return;
+      }
+      fd.append('file', file);
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', window.location.href);
+    xhr.onload = function() {
+      var resp = JSON.parse(xhr.responseText);
+      if (xhr.status === 200) {
+        msg.className = 'msg success';
+        msg.textContent = resp.data ? resp.data.msg : '上传成功！';
+        msg.style.display = 'block';
+        form.reset();
+        fileLabel.classList.remove('has-file');
+        fileText.textContent = '点击选择图片';
+      } else {
+        showError(resp.msg || '上传失败，请重试');
+      }
+      submitBtn.disabled = false;
+    };
+    xhr.onerror = function() {
+      showError('网络错误，请重试');
+      submitBtn.disabled = false;
+    };
+    xhr.send(fd);
+  });
+
+  function showError(text) {
+    msg.className = 'msg error';
+    msg.textContent = text;
+    msg.style.display = 'block';
+  }
+  {% endif %}
+})();
+</script>
+</body>
+</html>
