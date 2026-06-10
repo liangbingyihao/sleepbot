@@ -32,10 +32,11 @@
      - [4.8.3 随机抽题](#4-8-3-随机抽题)
 - [5. 早睡鼓励素材](#5-早睡鼓励素材)
   - [5.1 生成上传 Session](#5-1-生成上传-session)
-  - [5.2 素材采集页面](#5-2-素材采集页面)
-  - [5.3 提交素材](#5-3-提交素材)
-  - [5.4 获取收到的素材](#5-4-获取收到的素材)
-  - [5.5 审核素材](#5-5-审核素材)
+  - [5.2 查询 Session 状态](#5-2-查询-session-状态)
+  - [5.3 素材采集页面](#5-3-素材采集页面)
+  - [5.4 提交素材](#5-4-提交素材)
+  - [5.5 获取收到的素材](#5-5-获取收到的素材)
+  - [5.6 审核素材](#5-6-审核素材)
 
 ---
 
@@ -609,13 +610,49 @@ POST /assets/session
 
 `url` 为采集页面链接，可分享给好友。有效期在服务端配置（默认 24 小时）。
 
-### 5.2 素材采集页面
+### 5.2 查询 Session 状态
+
+```
+GET /assets/session/<session_id>
+```
+
+无需鉴权。前端页面在加载时调用此接口判断 session 是否有效。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "valid": true,
+    "expired": false,
+    "expires_at": "2026-05-26 10:00:00"
+  }
+}
+```
+
+### 5.3 素材采集页面
+
+采集页面为纯静态页面（`templates/upload.html`），可直接部署到 CDN 或 Nginx 等静态服务器。页面通过 URL 参数获取配置：
+
+| 参数 | 说明 |
+|---|---|
+| `session_id` | 必填，session ID |
+| `api_base` | 后端 API 地址，默认取当前域名 |
+
+Flask 同源部署：`/upload.html?session_id=xxx`  
+CDN 跨域部署：`https://cdn.example.com/upload.html?session_id=xxx&api_base=https://api.example.com`
+
+若由 Flask 直接托管，也可通过以下地址访问（URL 路径中包含 session_id）：
 
 ```
 GET /assets/upload/<session_id>
 ```
 
-好友在浏览器打开此链接，可看到上传表单。session 过期后页面显示「链接已过期」。
+### 5.4 提交素材
+
+```
+POST /assets/upload/<session_id>
+```
 
 ### 5.3 提交素材
 
@@ -644,7 +681,7 @@ POST /assets/upload/<session_id>
 }
 ```
 
-### 5.4 获取收到的素材
+### 5.5 获取收到的素材
 
 ```
 GET /assets/materials
@@ -695,7 +732,7 @@ GET /assets/materials
 }
 ```
 
-### 5.5 审核素材
+### 5.6 审核素材
 
 ```
 PATCH /assets/materials/<material_id>/status

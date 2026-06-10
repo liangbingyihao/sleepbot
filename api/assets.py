@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, abort, render_template, current_app
+import json
+from pathlib import Path
+
+from flask import Blueprint, request, abort, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 
 from models import db, UploadSession, UserOssFile
@@ -15,7 +18,7 @@ _ALLOWED_MIME = {
     'audio': {'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'audio/x-m4a'},
 }
 
-MAX_FILE_SIZE = 20 * 1024 * 1024
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 def _get_bucket(region):
@@ -83,21 +86,26 @@ def create_session(user_id):
 
     return ok({
         'session_id': session_id,
-        'url': f'{base_url}/api/sleep/assets/upload/{session_id}',
+        'url': f'{base_url}/upload.html?session_id={session_id}',
         'expires_at': expires_at.strftime('%Y-%m-%d %H:%M:%S'),
+    })
+
+
+@assets_bp.route('/assets/session/<session_id>', methods=['GET'])
+def session_info(session_id):
+    session = UploadSession.query.get(session_id)
+    if not session:
+        abort(404, 'session 不存在')
+    return ok({
+        'valid': not session.is_expired(),
+        'expired': session.is_expired(),
+        'expires_at': session.expires_at.strftime('%Y-%m-%d %H:%M:%S'),
     })
 
 
 @assets_bp.route('/assets/upload/<session_id>', methods=['GET'])
 def upload_page(session_id):
-    session = UploadSession.query.get(session_id)
-    if not session or session.is_expired():
-        if session and not session.is_expired():
-            pass
-        else:
-            return render_template('upload.html', expired=True, session_id=session_id)
-
-    return render_template('upload.html', expired=False, session_id=session_id)
+    return send_from_directory(current_app.root_path, 'templates/upload.html')
 
 
 @assets_bp.route('/assets/upload/<session_id>', methods=['POST'])
@@ -142,7 +150,7 @@ def upload_file(session_id):
         size = f.tell()
         f.seek(0)
         if size > MAX_FILE_SIZE:
-            abort(400, '文件大小不能超过 20MB')
+            abort(400, '文件大小不能超过 5MB')
 
         ext = secure_filename(f.filename).rsplit('.', 1)[-1] if '.' in f.filename else ''
         object_key = f'assets/{session.user_id}/{session_id}/{uuid.uuid4()}.{ext}'

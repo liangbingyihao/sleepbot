@@ -28,6 +28,7 @@
   p.desc { color: #666; font-size: 14px; margin-bottom: 24px; }
   .expired-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
   .expired-text { color: #999; font-size: 15px; }
+  .loading { color: #999; font-size: 15px; padding: 40px 0; }
   .form-group { margin-bottom: 16px; text-align: left; }
   label { display: block; font-size: 14px; color: #333; margin-bottom: 4px; font-weight: 500; }
   input[type=text], textarea {
@@ -63,51 +64,86 @@
 </style>
 </head>
 <body>
-<div class="card">
-{% if expired %}
-  <div class="expired-icon">⏰</div>
-  <h1>链接已过期</h1>
-  <p class="expired-text">该素材收集链接已失效，请联系你的好友重新生成。</p>
-{% else %}
-  <h1>给好友的睡前鼓励</h1>
-  <p class="desc">你的好友正在努力早睡，送上一份鼓励吧！</p>
+<div class="card" id="app">
+  <div id="loading">
+    <div class="loading">检查链接状态...</div>
+  </div>
+  <div id="expired" style="display:none;">
+    <div class="expired-icon">⏰</div>
+    <h1>链接已过期</h1>
+    <p class="expired-text">该素材收集链接已失效，请联系你的好友重新生成。</p>
+  </div>
+  <div id="formArea" style="display:none;">
+    <h1>给好友的睡前鼓励</h1>
+    <p class="desc">你的好友正在努力早睡，送上一份鼓励吧！</p>
 
-  <form id="uploadForm" enctype="multipart/form-data">
-    <div class="form-group">
-      <label>你的昵称</label>
-      <input type="text" name="friend_name" placeholder="请输入你的名字" required>
-    </div>
-
-    <div class="type-selector">
-      <button type="button" class="type-btn active" data-type="image">图片</button>
-      <button type="button" class="type-btn" data-type="audio">录音</button>
-      <button type="button" class="type-btn" data-type="text">文字</button>
-    </div>
-
-    <div id="fileSection">
-      <label class="file-label" id="fileLabel">
-        <span id="fileText">点击选择图片</span>
-      </label>
-      <input type="file" class="file-input" id="fileInput" accept="image/*" name="file">
-    </div>
-
-    <div id="textSection" style="display:none;">
+    <form id="uploadForm" enctype="multipart/form-data">
       <div class="form-group">
-        <label>鼓励的话</label>
-        <textarea name="content" placeholder="写一段话鼓励你的好友吧..."></textarea>
+        <label>你的昵称</label>
+        <input type="text" id="friendName" placeholder="请输入你的名字" required>
       </div>
-    </div>
 
-    <button type="submit" class="submit-btn" id="submitBtn">发送鼓励</button>
-  </form>
+      <div class="type-selector">
+        <button type="button" class="type-btn active" data-type="image">图片</button>
+        <button type="button" class="type-btn" data-type="audio">录音</button>
+        <button type="button" class="type-btn" data-type="text">文字</button>
+      </div>
 
-  <div class="msg" id="msg"></div>
-{% endif %}
+      <div id="fileSection">
+        <label class="file-label" id="fileLabel">
+          <span id="fileText">点击选择图片</span>
+        </label>
+        <input type="file" class="file-input" id="fileInput" accept="image/*">
+      </div>
+
+      <div id="textSection" style="display:none;">
+        <div class="form-group">
+          <label>鼓励的话</label>
+          <textarea id="textContent" placeholder="写一段话鼓励你的好友吧..."></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">发送鼓励</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+  </div>
 </div>
 
 <script>
 (function() {
-  {% if not expired %}
+  var params = new URLSearchParams(window.location.search);
+  var API_BASE = params.get('api_base') || window.location.origin;
+  var sessionId = params.get('session_id');
+  var loading = document.getElementById('loading');
+  var expired = document.getElementById('expired');
+  var formArea = document.getElementById('formArea');
+
+  if (!sessionId) {
+    loading.style.display = 'none';
+    expired.style.display = 'block';
+    expired.querySelector('.expired-text').textContent = '缺少 session_id 参数';
+    return;
+  }
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', API_BASE + '/api/sleep/assets/session/' + sessionId);
+  xhr.onload = function() {
+    loading.style.display = 'none';
+    var resp = JSON.parse(xhr.responseText);
+    if (resp.code === 'OK' && resp.data && !resp.data.expired) {
+      formArea.style.display = 'block';
+    } else {
+      expired.style.display = 'block';
+    }
+  };
+  xhr.onerror = function() {
+    loading.style.display = 'none';
+    expired.style.display = 'block';
+    expired.querySelector('.expired-text').textContent = '无法连接到服务器，请稍后重试';
+  };
+  xhr.send();
+
   var form = document.getElementById('uploadForm');
   var typeBtns = document.querySelectorAll('.type-btn');
   var fileSection = document.getElementById('fileSection');
@@ -157,11 +193,11 @@
     submitBtn.disabled = true;
 
     var fd = new FormData();
-    fd.append('friend_name', form.querySelector('[name=friend_name]').value.trim());
+    fd.append('friend_name', document.getElementById('friendName').value.trim());
     fd.append('type', getCurrentType());
 
     if (getCurrentType() === 'text') {
-      var content = form.querySelector('[name=content]').value.trim();
+      var content = document.getElementById('textContent').value.trim();
       if (!content) {
         showError('请输入鼓励的文字内容');
         submitBtn.disabled = false;
@@ -178,27 +214,28 @@
       fd.append('file', file);
     }
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', window.location.href);
-    xhr.onload = function() {
-      var resp = JSON.parse(xhr.responseText);
-      if (xhr.status === 200) {
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('POST', API_BASE + '/api/sleep/assets/upload/' + sessionId);
+    xhr2.onload = function() {
+      var resp = JSON.parse(xhr2.responseText);
+      if (xhr2.status === 200) {
         msg.className = 'msg success';
         msg.textContent = resp.data ? resp.data.msg : '上传成功！';
         msg.style.display = 'block';
         form.reset();
         fileLabel.classList.remove('has-file');
         fileText.textContent = '点击选择图片';
+        document.querySelector('.type-btn[data-type="image"]').click();
       } else {
         showError(resp.msg || '上传失败，请重试');
       }
       submitBtn.disabled = false;
     };
-    xhr.onerror = function() {
+    xhr2.onerror = function() {
       showError('网络错误，请重试');
       submitBtn.disabled = false;
     };
-    xhr.send(fd);
+    xhr2.send(fd);
   });
 
   function showError(text) {
@@ -206,7 +243,6 @@
     msg.textContent = text;
     msg.style.display = 'block';
   }
-  {% endif %}
 })();
 </script>
 </body>
