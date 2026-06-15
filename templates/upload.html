@@ -61,6 +61,37 @@
   .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
   .msg.success { display: block; background: #e6f7e6; color: #2e7d32; }
   .msg.error { display: block; background: #fdecea; color: #c62828; }
+
+  .recorder-box {
+    border: 2px dashed #ddd; border-radius: 8px; padding: 20px;
+    text-align: center; margin-bottom: 8px;
+  }
+  .recorder-box.recording { border-color: #e53935; background: #fff5f5; }
+  .recorder-box.has-recording { border-color: #4a90d9; background: #e8f0fe; }
+  .rec-timer { font-size: 28px; font-weight: 700; color: #333; margin: 8px 0; font-variant-numeric: tabular-nums; }
+  .rec-timer.recording { color: #e53935; }
+  .rec-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 24px; border: none; border-radius: 24px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .rec-btn-start { background: #e53935; color: #fff; }
+  .rec-btn-start:hover { background: #c62828; }
+  .rec-btn-stop { background: #555; color: #fff; }
+  .rec-btn-stop:hover { background: #333; }
+  .rec-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .rec-preview { margin-top: 12px; }
+  .rec-preview audio { width: 100%; height: 40px; }
+  .rec-hint { font-size: 13px; color: #999; margin-top: 8px; }
+  .rec-hint.error { color: #c62828; }
+  .notice {
+    background: #eef5ff; border-radius: 10px; padding: 14px 16px;
+    margin: 16px 0 0; text-align: left; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .notice-icon { font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+  .notice-text { font-size: 13px; color: #444; line-height: 1.5; }
+  .notice-text strong { color: #1a1a2e; }
+  .notice-privacy { color: #4a90d9; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -69,12 +100,12 @@
     <div class="loading">检查链接状态...</div>
   </div>
   <div id="expired" style="display:none;">
-    <div class="expired-icon">⏰</div>
+    <div class="expired-icon">&#x23F0;</div>
     <h1>链接已过期</h1>
     <p class="expired-text">该素材收集链接已失效，请联系你的好友重新生成。</p>
   </div>
   <div id="formArea" style="display:none;">
-    <h1>给好友的睡前鼓励</h1>
+    <h1>给 <span id="creatorName" style="color:#4a90d9;">好友</span> 的睡前鼓励</h1>
     <p class="desc">你的好友正在努力早睡，送上一份鼓励吧！</p>
 
     <form id="uploadForm" enctype="multipart/form-data">
@@ -90,16 +121,37 @@
       </div>
 
       <div id="fileSection">
-        <label class="file-label" id="fileLabel">
+        <label class="file-label" id="fileLabel" for="fileInput">
           <span id="fileText">点击选择图片</span>
         </label>
         <input type="file" class="file-input" id="fileInput" accept="image/*">
+      </div>
+
+      <div id="recorderSection" style="display:none;">
+        <div class="recorder-box" id="recorderBox">
+          <div class="rec-timer" id="recTimer">00:00</div>
+          <div>
+            <button type="button" class="rec-btn rec-btn-start" id="recStartBtn">&#x1F3A4; 开始录音</button>
+            <button type="button" class="rec-btn rec-btn-stop" id="recStopBtn" style="display:none;">&#x23F9; 停止</button>
+          </div>
+          <div class="rec-preview" id="recPreview" style="display:none;"></div>
+          <div class="rec-hint" id="recHint">点击"开始录音"录制你的鼓励</div>
+        </div>
       </div>
 
       <div id="textSection" style="display:none;">
         <div class="form-group">
           <label>鼓励的话</label>
           <textarea id="textContent" placeholder="写一段话鼓励你的好友吧..."></textarea>
+        </div>
+      </div>
+
+      <div class="notice">
+        <div class="notice-icon">&#x1F512;</div>
+        <div class="notice-text">
+          <strong>内容用途说明</strong><br>
+          你提交的内容将显示在好友的手机锁屏上，每次解锁都能看到你的鼓励。<br>
+          <span class="notice-privacy">仅你和对方可见，其他任何人无法查看。</span>
         </div>
       </div>
 
@@ -127,12 +179,15 @@
   }
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', API_BASE + '/api/sleep/assets/session/' + sessionId);
+  xhr.open('GET', API_BASE + '/api/sleep/assets/friend/session/' + sessionId);
   xhr.onload = function() {
     loading.style.display = 'none';
     var resp = JSON.parse(xhr.responseText);
     if (resp.code === 'OK' && resp.data && !resp.data.expired) {
       formArea.style.display = 'block';
+      if (resp.data.creator_name) {
+        document.getElementById('creatorName').textContent = resp.data.creator_name;
+      }
     } else {
       expired.style.display = 'block';
     }
@@ -147,6 +202,7 @@
   var form = document.getElementById('uploadForm');
   var typeBtns = document.querySelectorAll('.type-btn');
   var fileSection = document.getElementById('fileSection');
+  var recorderSection = document.getElementById('recorderSection');
   var textSection = document.getElementById('textSection');
   var fileInput = document.getElementById('fileInput');
   var fileLabel = document.getElementById('fileLabel');
@@ -154,8 +210,45 @@
   var msg = document.getElementById('msg');
   var submitBtn = document.getElementById('submitBtn');
 
+  var recStartBtn = document.getElementById('recStartBtn');
+  var recStopBtn = document.getElementById('recStopBtn');
+  var recTimer = document.getElementById('recTimer');
+  var recPreview = document.getElementById('recPreview');
+  var recHint = document.getElementById('recHint');
+  var recorderBox = document.getElementById('recorderBox');
+
+  var isApple = /iPhone|iPad|iPod|Mac OS|Safari/.test(navigator.userAgent) && !/Chrome|Android/.test(navigator.userAgent);
+  var MAX_RECORD_SECONDS = 60;
+  var mediaRecorder = null;
+  var audioChunks = [];
+  var recordedBlob = null;
+  var timerInterval = null;
+  var seconds = 0;
+
   function getCurrentType() {
     return document.querySelector('.type-btn.active').dataset.type;
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  function formatTime(s) {
+    var m = String(Math.floor(s / 60)).padStart(2, '0');
+    var sec = String(s % 60).padStart(2, '0');
+    return m + ':' + sec;
+  }
+
+  function resetRecorderUI() {
+    recordedBlob = null;
+    audioChunks = [];
+    recPreview.style.display = 'none';
+    recPreview.innerHTML = '';
+    recHint.textContent = '点击"开始录音"录制你的鼓励（最长 ' + MAX_RECORD_SECONDS + ' 秒）';
+    recHint.className = 'rec-hint';
+    recTimer.textContent = '00:00';
+    recTimer.className = 'rec-timer';
+    recorderBox.className = 'recorder-box';
   }
 
   typeBtns.forEach(function(btn) {
@@ -165,12 +258,18 @@
       var t = btn.dataset.type;
       if (t === 'text') {
         fileSection.style.display = 'none';
+        recorderSection.style.display = 'none';
         textSection.style.display = 'block';
+      } else if (t === 'audio') {
+        fileSection.style.display = 'none';
+        textSection.style.display = 'none';
+        recorderSection.style.display = 'block';
       } else {
         fileSection.style.display = 'block';
+        recorderSection.style.display = 'none';
         textSection.style.display = 'none';
-        fileInput.accept = t === 'image' ? 'image/*' : 'audio/*';
-        fileText.textContent = t === 'image' ? '点击选择图片' : '点击选择录音文件';
+        fileInput.accept = 'image/*';
+        fileText.textContent = '点击选择图片';
         fileLabel.classList.remove('has-file');
       }
     });
@@ -186,56 +285,152 @@
     }
   });
 
+  recStartBtn.addEventListener('click', function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      recHint.textContent = '您的浏览器不支持录音功能';
+      recHint.className = 'rec-hint error';
+      return;
+    }
+    recHint.textContent = '正在获取麦克风权限...';
+    recHint.className = 'rec-hint';
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      audioChunks = [];
+      seconds = 0;
+      recTimer.textContent = '00:00';
+      recTimer.className = 'rec-timer recording';
+      recorderBox.className = 'recorder-box recording';
+      recStartBtn.style.display = 'none';
+      recStopBtn.style.display = 'inline-flex';
+      recPreview.style.display = 'none';
+      recPreview.innerHTML = '';
+      recHint.textContent = '录音中...（最长 ' + MAX_RECORD_SECONDS + ' 秒）';
+      recHint.className = 'rec-hint';
+
+      stopTimer();
+      timerInterval = setInterval(function() {
+        seconds++;
+        recTimer.textContent = formatTime(seconds);
+        if (seconds >= MAX_RECORD_SECONDS) {
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+          stopTimer();
+        }
+      }, 1000);
+
+      if (!MediaRecorder.isTypeSupported('audio/mp4')) {
+        recHint.textContent = '您的浏览器不支持 m4a 录音格式';
+        recHint.className = 'rec-hint error';
+        recStartBtn.style.display = 'inline-flex';
+        recStartBtn.textContent = '\u{1F3A4} 开始录音';
+        recStopBtn.style.display = 'none';
+        return;
+      }
+      var mimeType = 'audio/mp4';
+
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+      mediaRecorder.onstop = function() {
+        stopTimer();
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        recordedBlob = new Blob(audioChunks, { type: mimeType.split(';')[0] });
+        recTimer.className = 'rec-timer';
+        recorderBox.className = 'recorder-box has-recording';
+        recStartBtn.style.display = 'inline-flex';
+        recStartBtn.textContent = '\u{1F504} 重新录制';
+        recStopBtn.style.display = 'none';
+        recHint.textContent = '已录制 ' + formatTime(seconds) + '，可播放试听';
+        recHint.className = 'rec-hint';
+        recPreview.style.display = 'block';
+        var audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = URL.createObjectURL(recordedBlob);
+        recPreview.appendChild(audio);
+      };
+      mediaRecorder.start();
+    }).catch(function(err) {
+      recHint.textContent = '麦克风权限被拒绝：' + err.message;
+      recHint.className = 'rec-hint error';
+    });
+  });
+
+  recStopBtn.addEventListener('click', function() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+    }
+  });
+
   form.addEventListener('submit', function(e) {
     e.preventDefault();
     msg.className = 'msg';
     msg.style.display = 'none';
     submitBtn.disabled = true;
 
-    var fd = new FormData();
-    fd.append('friend_name', document.getElementById('friendName').value.trim());
-    fd.append('type', getCurrentType());
+    try {
+      var fd = new FormData();
+      fd.append('friend_name', document.getElementById('friendName').value.trim());
+      fd.append('type', getCurrentType());
 
-    if (getCurrentType() === 'text') {
-      var content = document.getElementById('textContent').value.trim();
-      if (!content) {
-        showError('请输入鼓励的文字内容');
-        submitBtn.disabled = false;
-        return;
-      }
-      fd.append('content', content);
-    } else {
-      var file = fileInput.files[0];
-      if (!file) {
-        showError('请选择一个文件');
-        submitBtn.disabled = false;
-        return;
-      }
-      fd.append('file', file);
-    }
-
-    var xhr2 = new XMLHttpRequest();
-    xhr2.open('POST', API_BASE + '/api/sleep/assets/upload/' + sessionId);
-    xhr2.onload = function() {
-      var resp = JSON.parse(xhr2.responseText);
-      if (xhr2.status === 200) {
-        msg.className = 'msg success';
-        msg.textContent = resp.data ? resp.data.msg : '上传成功！';
-        msg.style.display = 'block';
-        form.reset();
-        fileLabel.classList.remove('has-file');
-        fileText.textContent = '点击选择图片';
-        document.querySelector('.type-btn[data-type="image"]').click();
+      if (getCurrentType() === 'text') {
+        var content = document.getElementById('textContent').value.trim();
+        if (!content) {
+          showError('请输入鼓励的文字内容');
+          submitBtn.disabled = false;
+          return;
+        }
+        fd.append('content', content);
+      } else if (getCurrentType() === 'audio') {
+        if (!recordedBlob) {
+          showError('请先录制一段录音');
+          submitBtn.disabled = false;
+          return;
+        }
+        var ext = recordedBlob.type.includes('mp4') ? 'm4a' : 'webm';
+        var audioFile = new File([recordedBlob], 'recording.' + ext, { type: recordedBlob.type });
+        fd.append('file', audioFile);
       } else {
-        showError(resp.msg || '上传失败，请重试');
+        var file = fileInput.files[0];
+        if (!file) {
+          showError('请选择一个文件');
+          submitBtn.disabled = false;
+          return;
+        }
+        fd.append('file', file);
       }
+
+      var xhr2 = new XMLHttpRequest();
+      xhr2.open('POST', API_BASE + '/api/sleep/assets/friend/upload/' + sessionId);
+      xhr2.onload = function() {
+        try {
+          var resp = JSON.parse(xhr2.responseText);
+          if (xhr2.status === 200) {
+            msg.className = 'msg success';
+            msg.textContent = resp.data ? resp.data.msg : '上传成功！';
+            msg.style.display = 'block';
+            form.reset();
+            fileLabel.classList.remove('has-file');
+            fileText.textContent = '点击选择图片';
+            document.querySelector('.type-btn[data-type="image"]').click();
+          } else {
+            showError(resp.msg || '上传失败，请重试');
+          }
+        } catch(e) {
+          console.error('parse error, status:', xhr2.status, 'body:', xhr2.responseText.slice(0, 200));
+          showError('服务器返回异常' + (xhr2.status ? ' (' + xhr2.status + ')' : '') + '，请稍后重试');
+        }
+        submitBtn.disabled = false;
+      };
+      xhr2.onerror = function() {
+        showError('网络错误，请重试');
+        submitBtn.disabled = false;
+      };
+      xhr2.send(fd);
+    } catch(e) {
+      showError('提交出错：' + e.message);
       submitBtn.disabled = false;
-    };
-    xhr2.onerror = function() {
-      showError('网络错误，请重试');
-      submitBtn.disabled = false;
-    };
-    xhr2.send(fd);
+    }
   });
 
   function showError(text) {

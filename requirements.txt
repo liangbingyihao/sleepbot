@@ -5,5 +5,6 @@ PyMySQL==1.1.1
 PyJWT==2.9.0
 pytz==2024.1
 python-dotenv==1.0.1
-alibabacloud-oss-v2==0.3.0
+alibabacloud-oss-v2==1.3.1
 uWSGI==2.0.26
+urllib3==1.26.18

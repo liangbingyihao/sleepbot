@@ -29,3 +29,4 @@ class Config:
     ASSET_SESSION_TTL = int(os.getenv('ASSET_SESSION_TTL', '86400'))
 
     UPLOAD_BASE_URL = os.getenv('UPLOAD_BASE_URL', 'http://localhost:5050')
+    MATERIAL_LIMIT = int(os.getenv('MATERIAL_LIMIT', '5'))

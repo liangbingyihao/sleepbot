@@ -106,7 +106,7 @@ GET /profile
     "id": 1,
     "user_id": "user123",
     "nickname": "张三",
-    "region": "中国",
+    "region": "cn",
     "source_code": "ABC123",
     "created_at": "2026-05-25 10:00:00",
     "updated_at": "2026-05-25 10:00:00"
@@ -124,7 +124,7 @@ POST /profile
 ```json
 {
   "nickname": "张三",
-  "region": "中国",
+  "region": "cn",
   "source_code": "ABC123"
 }
 ```
@@ -613,7 +613,7 @@ POST /assets/session
 ### 5.2 查询 Session 状态
 
 ```
-GET /assets/session/<session_id>
+GET /assets/friend/session/<session_id>
 ```
 
 无需鉴权。前端页面在加载时调用此接口判断 session 是否有效。
@@ -645,19 +645,13 @@ CDN 跨域部署：`https://cdn.example.com/upload.html?session_id=xxx&api_base=
 若由 Flask 直接托管，也可通过以下地址访问（URL 路径中包含 session_id）：
 
 ```
-GET /assets/upload/<session_id>
+GET /assets/friend/upload/<session_id>
 ```
 
 ### 5.4 提交素材
 
 ```
-POST /assets/upload/<session_id>
-```
-
-### 5.3 提交素材
-
-```
-POST /assets/upload/<session_id>
+POST /assets/friend/upload/<session_id>
 ```
 
 **Content-Type**: `multipart/form-data`
@@ -689,46 +683,49 @@ GET /assets/materials
 
 **请求头**: `X-User-Id` 必填。
 
-返回当前用户收到的所有素材，按时间倒序。图片和音频会附带 `presigned_url`（有效期 15 分钟）。
+返回当前用户收到的素材，按时间倒序。`rejected` 的素材不会返回。图片和音频会附带 `presigned_url`（有效期 15 分钟）。`full` 字段标识图片/音频素材库是否已达上限（默认上限 5，可通过环境变量 `MATERIAL_LIMIT` 调整）。
 
 **响应示例**:
 ```json
 {
   "code": "OK",
-  "data": [
-    {
-      "id": 1,
-      "user_id": "user123",
-      "session_id": "a1b2c3d4-...",
-      "friend_name": "小明",
-      "file_type": "image",
-      "bucket": "cn-bucket",
-      "object_key": "assets/user123/session/uuid.jpg",
-      "content_text": "",
-      "file_size": 102400,
-      "mime_type": "image/jpeg",
-      "status": "pending",
-      "presigned_url": "https://...",
-      "created_at": "2026-05-25 10:00:00",
-      "updated_at": "2026-05-25 10:00:00"
-    },
-    {
-      "id": 2,
-      "user_id": "user123",
-      "session_id": "a1b2c3d4-...",
-      "friend_name": "小红",
-      "file_type": "text",
-      "bucket": "",
-      "object_key": "",
-      "content_text": "早点休息哦！",
-      "file_size": 0,
-      "mime_type": "text/plain",
-      "status": "approved",
-      "presigned_url": null,
-      "created_at": "2026-05-25 10:00:00",
-      "updated_at": "2026-05-25 10:00:00"
-    }
-  ]
+  "data": {
+    "materials": [
+      {
+        "id": 1,
+        "user_id": "user123",
+        "session_id": "a1b2c3d4-...",
+        "friend_name": "小明",
+        "file_type": "image",
+        "bucket": "cn-bucket",
+        "object_key": "assets/user123/a1b2c3d4-....jpg",
+        "content_text": "",
+        "file_size": 102400,
+        "mime_type": "image/jpeg",
+        "status": "pending",
+        "presigned_url": "https://...",
+        "created_at": "2026-05-25 10:00:00",
+        "updated_at": "2026-05-25 10:00:00"
+      },
+      {
+        "id": 2,
+        "user_id": "user123",
+        "session_id": "a1b2c3d4-...",
+        "friend_name": "小红",
+        "file_type": "text",
+        "bucket": "",
+        "object_key": "",
+        "content_text": "早点休息哦！",
+        "file_size": 0,
+        "mime_type": "text/plain",
+        "status": "approved",
+        "presigned_url": null,
+        "created_at": "2026-05-25 10:00:00",
+        "updated_at": "2026-05-25 10:00:00"
+      }
+    ],
+    "full": false
+  }
 }
 ```
 
@@ -738,6 +735,8 @@ GET /assets/materials
 PATCH /assets/materials/<material_id>/status
 ```
 
+**请求头**: `X-User-Id` 必填。
+
 **请求体**:
 ```json
 {
@@ -745,6 +744,6 @@ PATCH /assets/materials/<material_id>/status
 }
 ```
 
-`status` 可选值：`approved`（采用）、`rejected`（丢弃）。只能审核状态为 `pending` 的素材。
+`status` 可选值：`approved`（采用）、`rejected`（丢弃）、`pending`（取消采用）。允许的状态变更：`pending` → `approved`/`rejected`，`approved` → `pending`。设为 `rejected` 时，对应的 OSS 文件会被删除。
 
 **响应示例**: 同素材对象。
