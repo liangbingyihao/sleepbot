@@ -288,6 +288,15 @@ def review_material(user_id, material_id):
     if new_status == 'rejected' and material.object_key:
         _delete_from_oss(material.bucket, material.object_key)
 
+    if new_status == 'approved':
+        old_approved = UserOssFile.query.filter_by(
+            user_id=user_id,
+            file_type=material.file_type,
+            status='approved'
+        ).all()
+        for old in old_approved:
+            old.status = 'pending'
+
     material.status = new_status
     db.session.commit()
     return ok(material.to_dict())

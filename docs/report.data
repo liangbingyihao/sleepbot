@@ -1,0 +1,65 @@
+// ========== 本地调试示例数据（snake_case，与后端 API 对齐） ==========
+    // 日报示例（不健康4小时自定义时段）
+    const dayDemoData = {
+      custom_sleep_time: "22:30 – 02:30",
+      sleep_is_unhealthy: true,
+      day_type: "warning",
+      lock_hour: "3小时21分",
+      unlock_count: 1,
+      show_save_time: true,
+      save_hour: "2小时10分",
+      save_tip: ""
+    }
+    // renderReport(dayDemoData, REPORT_TYPE.DAY)
+
+    // 周报示例
+    const weekDemoData = {
+      sleep_is_unhealthy: true,
+      total_lock_minute: 4320,
+      total_lock_hour: "72小时",
+      success_day: 5,
+      avg_unlock: 1.2,
+      show_rate: true,
+      rate: 35,
+      total_save_hour: "7小时40分",
+      encourage_text: "下周继续和搭档一起坚守作息，收获更好的睡眠吧",
+      week_day_list: [
+        {day:'1',type:'success'},{day:'2',type:'success'},{day:'3',type:'danger'},
+        {day:'4',type:'success'},{day:'5',type:'warning'},{day:'6',type:'success'},{day:'7',type:'empty'}
+      ]
+    }
+    renderReport(weekDemoData, REPORT_TYPE.WEEK)
+
+    // 月报示例
+    const monthDemoData = {
+      sleep_is_unhealthy: true,
+      month_total_hour: "210小时",
+      avg_day_hour: "7小时",
+      success_month_day: 18,
+      max_serial_day: 9,
+      show_save_time: true,
+      month_save_hour: "42小时10分",
+      month_comment: "你近期设置睡眠时长较短，即使全程锁屏，休息时长仍未达到健康标准，长期容易疲惫，建议调整锁屏区间多休息。",
+      month_day_list: [
+        {day:'1',type:'success'},{day:'2',type:'warning'},{day:'3',type:'danger'},{day:'4',type:'success'},{day:'5',type:'empty'},{day:'6',type:'success'},{day:'7',type:'warning'},
+        {day:'8',type:'success'},{day:'9',type:'success'},{day:'10',type:'warning'},{day:'11',type:'danger'},{day:'12',type:'success'},{day:'13',type:'success'},{day:'14',type:'warning'},
+        {day:'15',type:'success'},{day:'16',type:'empty'},{day:'17',type:'success'},{day:'18',type:'warning'},{day:'19',type:'success'},{day:'20',type:'success'},{day:'21',type:'danger'},
+        {day:'22',type:'success'},{day:'23',type:'warning'},{day:'24',type:'success'},{day:'25',type:'empty'},{day:'26',type:'success'},{day:'27',type:'warning'},{day:'28',type:'success'},
+        {day:'29',type:'success'},{day:'30',type:'warning'}
+      ]
+    }
+    
+
+新增健康标记判断 sleep_is_unhealthy
+日报、月报顶部渲染黄色警示条
+挽回时长文案分支切换（正常 / 睡眠不足）
+标签下方增加小字备注说明判定规则
+动态睡眠时段
+移除写死23:00 – 07:00，读取入参 custom_sleep_time 展示用户自定义起止时间
+分享 H5 自动追加底部下载引导文案
+3. 入参 JSON 新增字段（后端必须同步返回）
+表格
+字段	说明
+custom_sleep_time	用户自定义睡眠时段字符串，例：22:30 – 06:30
+sleep_is_unhealthy	Boolean，true = 自定义时长＜6 小时不健康
+day_type	当日状态：success/warning/danger，替代前端时长计算

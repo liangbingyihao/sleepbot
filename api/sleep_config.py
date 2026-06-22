@@ -45,17 +45,21 @@ def set_sleep_config(user_id):
     if timezone not in _ALL_TZ:
         abort(400, f'无效时区，可用时区列表见 https://en.wikipedia.org/wiki/List_of_tz_database_time_zones')
 
+    sleep_is_unhealthy = bool(data.get('sleep_is_unhealthy', False))
+
     config = SleepConfig.query.filter_by(user_id=user_id).first()
     if config:
         config.sleep_start_time = sleep_start
         config.sleep_end_time = sleep_end
         config.timezone = timezone
+        config.sleep_is_unhealthy = sleep_is_unhealthy
     else:
         config = SleepConfig(
             user_id=user_id,
             sleep_start_time=sleep_start,
             sleep_end_time=sleep_end,
             timezone=timezone,
+            sleep_is_unhealthy=sleep_is_unhealthy,
         )
         db.session.add(config)
 

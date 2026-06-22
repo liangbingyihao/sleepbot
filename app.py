@@ -12,6 +12,7 @@ from api.supervision import supervision_bp
 from api.configs import configs_bp
 from api.user_profile import profile_bp
 from api.assets import assets_bp
+from api.report import report_bp
 
 
 def create_app():
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(configs_bp, url_prefix='/api/sleep')
     app.register_blueprint(profile_bp, url_prefix='/api/sleep')
     app.register_blueprint(assets_bp, url_prefix='/api/sleep')
+    app.register_blueprint(report_bp, url_prefix='/api/sleep')
 
     @app.route('/api/sleep/docs')
     def api_docs():

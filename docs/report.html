@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>睡眠报告</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+    html {
+      font-size: 16px;
+    }
+    body {
+      background: #f6f7f9;
+      padding: 1rem;
+      color: #222;
+      line-height: 1.5;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .divider {
+      height: 1px;
+      background: #eee;
+      margin: 1rem 0;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.375rem 0;
+    }
+    .row-label {
+      color: #666;
+    }
+    .row-value {
+      font-weight: 500;
+    }
+    /* 睡眠状态标签 */
+    .tag {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: #fff;
+    }
+    .tag-success {
+      background: #36c66c;
+    }
+    .tag-warning {
+      background: #f7b940;
+    }
+    .tag-danger {
+      background: #f25656;
+    }
+    /* 不健康提示条 */
+    .warn-bar {
+      background: #fff3cd;
+      color: #946400;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+    }
+    .remark-small {
+      font-size: 0.72rem;
+      color: #888;
+      margin-top: 4px;
+    }
+    /* 周小日历 */
+    .week-calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin: 0.75rem 0;
+    }
+    /* 整月月历 */
+    .month-calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin: 0.75rem 0;
+    }
+    .day-cell {
+      aspect-ratio: 1/1;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #fff;
+    }
+    .day-empty {
+      background: #eee;
+      color: #999;
+    }
+    .day-success {
+      background: #36c66c;
+    }
+    .day-warning {
+      background: #f7b940;
+    }
+    .day-danger {
+      background: #f25656;
+    }
+    /* 底部文案 */
+    .tips-text {
+      color: #999;
+      font-size: 0.875rem;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .encourage-text {
+      text-align: center;
+      color: #444;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .download-tip {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="reportWrap"></div>
+
+  <script>
+    // 环境区分：App WebView / 线上分享H5
+    const isAppEnv = window.AppJSBridge !== undefined;
+    // 页面类型常量
+    const REPORT_TYPE = {
+      DAY: 'day',
+      WEEK: 'week',
+      MONTH: 'month'
+    }
+
+    // 分享H5初始化逻辑
+    if (!isAppEnv) {
+      function getUrlParam(name) {
+        const reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        const r = window.location.search.substr(1).match(reg);
+        if (r != null) return decodeURIComponent(r[2]);
+        return null;
+      }
+      const type = getUrlParam('type');
+      const uid = getUrlParam('uid');
+      const date = getUrlParam('date');
+      const week = getUrlParam('week');
+      const month = getUrlParam('month');
+      // 模拟请求后端分享数据接口，此处由前端对接后端实现
+      /*
+      fetch(`/api/share/report?uid=${uid}&type=${type}&date=${date}&week=${week}&month=${month}`)
+        .then(res=>res.json())
+        .then(data=>{
+          renderReport(data, type);
+        })
+        .catch(()=>{
+          document.getElementById('reportWrap').innerHTML = '<div class="card">分享报告已过期或网络异常</div>';
+        })
+      */
+    }
+
+    /**
+     * 渲染入口（App通过JSBridge调用）
+     * @param {Object} data 睡眠统计JSON
+     * @param {String} type day/week/month
+     */
+    function renderReport(data, type) {
+      const wrap = document.getElementById('reportWrap');
+      let html = '';
+      if (type === REPORT_TYPE.DAY) {
+        html = renderDayReport(data);
+      } else if (type === REPORT_TYPE.WEEK) {
+        html = renderWeekReport(data);
+      } else if (type === REPORT_TYPE.MONTH) {
+        html = renderMonthReport(data);
+      }
+      // 分享H5底部追加下载引导
+      if (!isAppEnv) {
+        html += `<div class="download-tip">想要记录自己的睡眠作息？下载早睡锁屏App</div>`;
+      }
+      wrap.innerHTML = html;
+    }
+
+    // 1. 日报渲染
+    function renderDayReport(d) {
+      // 状态标签直接取后端type，不再前端计算时长阈值
+      let tagClass = '';
+      let tagText = '';
+      if (d.dayType === 'success') {
+        tagClass = 'tag-success'; tagText = '打卡成功';
+      } else if (d.dayType === 'warning') {
+        tagClass = 'tag-warning'; tagText = '轻度熬夜';
+      } else {
+        tagClass = 'tag-danger'; tagText = '熬夜失败';
+      }
+
+      // 不健康警示条
+      let warnBarHtml = '';
+      if (d.sleepIsUnhealthy) {
+        warnBarHtml = `<div class="warn-bar">⚠️ 你设置的睡眠时长不足健康最低6小时标准，建议适当延长休息时间</div>`;
+      }
+
+      // 标签备注小字
+      let remarkHtml = '';
+      if (d.sleepIsUnhealthy) {
+        remarkHtml = `<div class="remark-small">注：判定仅基于你自定义时段，不代表达到健康睡眠标准</div>`;
+      }
+
+      // 挽回时长文案区分正常/不健康
+      let saveHtml = '';
+      if (d.showSaveTime) {
+        let saveText = '';
+        if (d.sleepIsUnhealthy) {
+          saveText = `对比初期作息，少玩手机${d.saveHour}，但整体睡眠时长不足，建议延长睡眠时段`;
+        } else {
+          saveText = `对比初期作息，挽回熬夜 ${d.saveHour}`;
+        }
+        saveHtml = `
+          <div class="row">
+            <span class="row-label">自律提升</span>
+            <span class="row-value">${saveText}</span>
+          </div>
+        `;
+      } else if (d.saveTip) {
+        saveHtml = `<div style="color:#888;font-size:0.85rem;margin-top:4px">${d.saveTip}</div>`;
+      }
+
+      return `
+        ${warnBarHtml}
+        <div class="card">
+          <div class="card-title">
+            昨晚睡眠报告
+            <span class="tag ${tagClass}">${tagText}</span>
+          </div>
+          ${remarkHtml}
+          <div class="row">
+            <span class="row-label">锁屏考核时段</span>
+            <span class="row-value">${d.customSleepTime}</span>
+          </div>
+          <div class="row">
+            <span class="row-label">中途解锁次数</span>
+            <span class="row-value">${d.unlockCount} 次</span>
+          </div>
+          <div class="row">
+            <span class="row-label">有效坚守时长</span>
+            <span class="row-value">${d.lockHour}</span>
+          </div>
+          ${saveHtml}
+        </div>
+      `;
+    }
+
+    // 2. 周报渲染
+    function renderWeekReport(d) {
+      let rateHtml = '';
+      if (d.showRate) {
+        rateHtml = `
+          <div class="row">
+            <span class="row-label">相比上周解锁下降</span>
+            <span class="row-value">${d.rate}%</span>
+          </div>
+          <div class="row">
+            <span class="row-label">本周累计挽回熬夜</span>
+            <span class="row-value">${d.totalSaveHour}</span>
+          </div>
+        `;
+      }
+
+      // 不健康小字提示
+      let weekWarnTip = '';
+      if (d.sleepIsUnhealthy) {
+        weekWarnTip = `<div class="remark-small" style="margin-top:8px">你当前自定义睡眠时长低于健康标准，建议延长休息区间</div>`;
+      }
+
+      // 周日历
+      let weekCalHtml = '';
+      d.weekDayList.forEach(item => {
+        let cellClass = 'day-empty';
+        if(item.type === 'success') cellClass = 'day-success'
+        if(item.type === 'warning') cellClass = 'day-warning'
+        if(item.type === 'danger') cellClass = 'day-danger'
+        weekCalHtml += `<div class="day-cell ${cellClass}">${item.day}</div>`
+      })
+
+      return `
+        <div class="card">
+          <div class="card-title">本周早睡周报</div>
+          <div class="row">
+            <span class="row-label">本周有效坚守总时长</span>
+            <span class="row-value">${d.totalLockMinute}分钟（${d.totalLockHour}）</span>
+          </div>
+          <div class="row">
+            <span class="row-label">成功打卡天数</span>
+            <span class="row-value">${d.successDay} 天</span>
+          </div>
+          <div class="row">
+            <span class="row-label">平均每晚解锁</span>
+            <span class="row-value">${d.avgUnlock} 次</span>
+          </div>
+          ${rateHtml}
+          <div class="divider"></div>
+          <div>本周睡眠一览</div>
+          <div class="week-calendar">${weekCalHtml}</div>
+          ${weekWarnTip}
+          <div class="encourage-text">${d.encourageText}</div>
+        </div>
+      `;
+    }
+
+    // 3. 月报渲染
+    function renderMonthReport(d) {
+      // 顶部不健康警示条
+      let warnBarHtml = '';
+      if (d.sleepIsUnhealthy) {
+        warnBarHtml = `<div class="warn-bar">⚠️ 你设置的睡眠时长不足健康最低6小时标准，长期容易疲惫，建议调整锁屏区间多休息</div>`;
+      }
+
+      let saveHtml = '';
+      if(d.showSaveTime) {
+        saveHtml = `
+          <div class="row">
+            <span class="row-label">月度累计挽回熬夜</span>
+            <span class="row-value">${d.monthSaveHour}</span>
+          </div>
+        `;
+      }
+
+      // 月历
+      let monthCalHtml = '';
+      d.monthDayList.forEach(item => {
+        let cellClass = 'day-empty';
+        if(item.type === 'success') cellClass = 'day-success'
+        if(item.type === 'warning') cellClass = 'day-warning'
+        if(item.type === 'danger') cellClass = 'day-danger'
+        monthCalHtml += `<div class="day-cell ${cellClass}">${item.day}</div>`
+      })
+
+      return `
+        ${warnBarHtml}
+        <div class="card">
+          <div class="card-title">月度睡眠复盘</div>
+          <div class="row">
+            <span class="row-label">本月总坚守时长</span>
+            <span class="row-value">${d.monthTotalHour}</span>
+          </div>
+          <div class="row">
+            <span class="row-label">日均坚守时长</span>
+            <span class="row-value">${d.avgDayHour}</span>
+          </div>
+          <div class="row">
+            <span class="row-label">打卡成功天数</span>
+            <span class="row-value">${d.successMonthDay} 天</span>
+          </div>
+          <div class="row">
+            <span class="row-label">最高连续打卡</span>
+            <span class="row-value">${d.maxSerialDay} 天</span>
+          </div>
+          ${saveHtml}
+          <div class="divider"></div>
+          <div>本月完整作息日历</div>
+          <div class="month-calendar">${monthCalHtml}</div>
+          <div class="tips-text">${d.monthComment}</div>
+        </div>
+      `;
+    }
+
+    // ========== 本地调试示例数据（已适配新字段） ==========
+    // 日报示例（不健康4小时自定义时段）
+    const dayDemoData = {
+      customSleepTime: "22:30 – 02:30",
+      sleepIsUnhealthy: true,
+      dayType: "warning",
+      lockHour: "3小时21分",
+      unlockCount: 1,
+      showSaveTime: true,
+      saveHour: "2小时10分",
+      saveTip: ""
+    }
+    // renderReport(dayDemoData, REPORT_TYPE.DAY)
+
+    // 周报示例
+    const weekDemoData = {
+      sleepIsUnhealthy: true,
+      totalLockMinute: 4320,
+      totalLockHour: "72小时",
+      successDay: 5,
+      avgUnlock: 1.2,
+      showRate: true,
+      rate: 35,
+      totalSaveHour: "7小时40分",
+      encourageText: "下周继续和搭档一起坚守作息，收获更好的睡眠吧",
+      weekDayList: [
+        {day:'1',type:'success'},{day:'2',type:'success'},{day:'3',type:'danger'},
+        {day:'4',type:'success'},{day:'5',type:'warning'},{day:'6',type:'success'},{day:'7',type:'empty'}
+      ]
+    }
+    renderReport(weekDemoData, REPORT_TYPE.WEEK)
+
+    // 月报示例
+    const monthDemoData = {
+      sleepIsUnhealthy: true,
+      monthTotalHour: "210小时",
+      avgDayHour: "7小时",
+      successMonthDay: 18,
+      maxSerialDay: 9,
+      showSaveTime: true,
+      monthSaveHour: "42小时10分",
+      monthComment: "你近期设置睡眠时长较短，即使全程锁屏，休息时长仍未达到健康标准，长期容易疲惫，建议调整锁屏区间多休息。",
+      monthDayList: [
+        {day:'1',type:'success'},{day:'2',type:'warning'},{day:'3',type:'danger'},{day:'4',type:'success'},{day:'5',type:'empty'},{day:'6',type:'success'},{day:'7',type:'warning'},
+        {day:'8',type:'success'},{day:'9',type:'success'},{day:'10',type:'warning'},{day:'11',type:'danger'},{day:'12',type:'success'},{day:'13',type:'success'},{day:'14',type:'warning'},
+        {day:'15',type:'success'},{day:'16',type:'empty'},{day:'17',type:'success'},{day:'18',type:'warning'},{day:'19',type:'success'},{day:'20',type:'success'},{day:'21',type:'danger'},
+        {day:'22',type:'success'},{day:'23',type:'warning'},{day:'24',type:'success'},{day:'25',type:'empty'},{day:'26',type:'success'},{day:'27',type:'warning'},{day:'28',type:'success'},
+        {day:'29',type:'success'},{day:'30',type:'warning'}
+      ]
+    }
+    // renderReport(monthDemoData, REPORT_TYPE.MONTH)
+  </script>
+</body>
+</html>

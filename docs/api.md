@@ -37,6 +37,10 @@
   - [5.4 提交素材](#5-4-提交素材)
   - [5.5 获取收到的素材](#5-5-获取收到的素材)
   - [5.6 审核素材](#5-6-审核素材)
+- [6. 睡眠报告](#6-睡眠报告)
+  - [6.1 日报](#6-1-日报)
+  - [6.2 周报](#6-2-周报)
+  - [6.3 月报](#6-3-月报)
 
 ---
 
@@ -105,14 +109,18 @@ GET /profile
   "data": {
     "id": 1,
     "user_id": "user123",
-    "nickname": "张三",
-    "region": "cn",
-    "source_code": "ABC123",
+    "sleep_start_time": "23:00",
+    "sleep_end_time": "08:00",
+    "timezone": "Asia/Shanghai",
+    "sleep_is_unhealthy": false,
+    "total_custom_minutes": 540,
     "created_at": "2026-05-25 10:00:00",
     "updated_at": "2026-05-25 10:00:00"
   }
 }
 ```
+
+`sleep_is_unhealthy`: 用户自定义时段 <6h 时标记为 true。`total_custom_minutes`: 自定义时段总分钟数（跨午夜自动 +24h）。
 
 ### 1.2 初始化用户信息
 
@@ -185,11 +193,12 @@ POST /config
 {
   "sleep_start_time": "23:00",
   "sleep_end_time": "08:00",
-  "timezone": "Asia/Shanghai"
+  "timezone": "Asia/Shanghai",
+  "sleep_is_unhealthy": false
 }
 ```
 
-`timezone` 可选，默认为 `UTC`。使用 IANA 时区标识符（如 `Asia/Shanghai`、`America/New_York`、`Europe/London`）。
+`timezone` 可选，默认为 `UTC`。使用 IANA 时区标识符（如 `Asia/Shanghai`、`America/New_York`、`Europe/London`）。`sleep_is_unhealthy` 可选，默认 false，由客户端在用户坚持使用 <6h 时段时设为 true。
 
 **响应示例**:
 ```json
@@ -234,11 +243,14 @@ POST /status
 **请求体**:
 ```json
 {
-  "status": "locked"
+  "status": "locked",
+  "reported_at": "2026-06-22T18:19:00+08:00"
 }
 ```
 
 可选状态值: `locked`(锁屏), `active`(活跃), `idle`(空闲), `sleeping`(睡眠中), `awake`(清醒)
+
+`reported_at` 可选，ISO 格式时间戳。带时区偏移时服务端自动转 UTC 存储；不带时区则视为 UTC。不传则使用服务器当前 UTC 时间。
 
 **响应示例**:
 ```json
@@ -747,3 +759,145 @@ PATCH /assets/materials/<material_id>/status
 `status` 可选值：`approved`（采用）、`rejected`（丢弃）、`pending`（取消采用）。允许的状态变更：`pending` → `approved`/`rejected`，`approved` → `pending`。设为 `rejected` 时，对应的 OSS 文件会被删除。
 
 **响应示例**: 同素材对象。
+
+## 6. 睡眠报告
+
+睡眠报告基于用户自定义睡眠时段（来自 `SleepConfig`）计算。三档判定为比例制：
+
+- 🟢 **success**: 有效锁屏时长 > 时段总时长 × 0.875
+- 🟡 **warning**: 时段总时长 × 0.625 ≤ 有效锁屏时长 ≤ 时段总时长 × 0.875
+- 🔴 **danger**: 有效锁屏时长 < 时段总时长 × 0.625
+
+所有报告均返回用户睡眠配置（`custom_sleep_time` 字符串、`sleep_is_unhealthy` 布尔），前端据此渲染时段文案和健康警示。
+
+### 6.1 日报
+
+```
+GET /report/daily?date=YYYY-MM-DD
+```
+
+**请求头**: `X-User-Id` 必填。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "type": "day",
+    "custom_sleep_time": "23:00 – 07:00",
+    "sleep_is_unhealthy": false,
+    "lock_hour": "7小时21分",
+    "lock_seconds": 26460,
+    "unlock_count": 1,
+    "day_type": "success",
+    "show_save_time": true,
+    "save_hour": "7小时40分",
+    "save_seconds": 27600,
+    "save_tip": ""
+  }
+}
+```
+
+**字段说明**:
+
+| 字段 | 说明 |
+|------|------|
+| `custom_sleep_time` | 用户自定义时段字符串，如 `"23:00 – 07:00"` |
+| `sleep_is_unhealthy` | 自定义时长 <6h 时为 true |
+| `lock_hour` / `lock_seconds` | 自定义时段内有效锁屏时长 |
+| `unlock_count` | 时段内解锁次数 |
+| `day_type` | success / warning / danger / empty |
+| `show_save_time` | 累计 ≥3 晚有效记录 且 当日挽回 ≥0 时为 true |
+| `save_hour` / `save_seconds` | 挽回熬夜时长 |
+| `save_tip` | 空数据 / 不足3晚 / 挽回为负时的文案提示 |
+
+**空态**（当日无数据）: `day_type: "empty"`, `lock_seconds: 0`。
+
+### 6.2 周报
+
+```
+GET /report/weekly?date=YYYY-MM-DD
+```
+
+取该日期所在周的周一~周日。
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "type": "week",
+    "custom_sleep_time": "23:00 – 07:00",
+    "sleep_is_unhealthy": false,
+    "total_lock_minute": 4320,
+    "total_lock_hour": "72小时",
+    "success_day": 5,
+    "avg_unlock": 1.2,
+    "show_rate": true,
+    "rate": 35,
+    "total_save_hour": "7小时40分",
+    "encourage_text": "下周继续和搭档一起坚守作息，收获更好的睡眠吧",
+    "week_day_list": [
+      {"day": "1", "type": "success"},
+      {"day": "2", "type": "success"},
+      {"day": "3", "type": "danger"},
+      {"day": "4", "type": "success"},
+      {"day": "5", "type": "warning"},
+      {"day": "6", "type": "success"},
+      {"day": "7", "type": "empty"}
+    ]
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `total_lock_minute` | 本周总锁屏分钟数 |
+| `total_lock_hour` | 人性化格式 |
+| `success_day` | 本周成功打卡天数 |
+| `avg_unlock` | 平均每晚解锁次数 |
+| `show_rate` | 上周有完整7天数据时 true |
+| `rate` | 环比上周解锁下降百分比（正数=进步） |
+| `total_save_hour` | 本周累计挽回时长，≥3晚才计算 |
+| `week_day_list` | 7天色块，type: success/warning/danger/empty |
+
+### 6.3 月报
+
+```
+GET /report/monthly?month=YYYY-MM
+```
+
+**响应示例**:
+```json
+{
+  "code": "OK",
+  "data": {
+    "type": "month",
+    "custom_sleep_time": "23:00 – 07:00",
+    "sleep_is_unhealthy": false,
+    "month_total_hour": "210小时",
+    "avg_day_hour": "7小时",
+    "success_month_day": 18,
+    "max_serial_day": 9,
+    "show_save_time": true,
+    "month_save_hour": "42小时10分",
+    "month_comment": "本月自控力稳步提升，熬夜次数明显减少，继续保持",
+    "month_day_list": [
+      {"day": "1", "type": "success"},
+      {"day": "2", "type": "warning"},
+      ...
+    ]
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `month_total_hour` | 本月累计有效锁屏总时长 |
+| `avg_day_hour` | 日均坚守时长 |
+| `success_month_day` | 本月打卡成功天数 |
+| `max_serial_day` | 月度最高连续打卡天数 |
+| `show_save_time` | 累计 ≥3 晚且有挽回数据 |
+| `month_save_hour` | 本月累计挽回时长 |
+| `month_comment` | 自动评语（≥5天数据才生成），不健康用户自动追加睡眠提醒 |
+| `month_day_list` | 当月每日色块，type: success/warning/danger/empty |

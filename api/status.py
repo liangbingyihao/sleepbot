@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, request, abort
 
@@ -26,6 +26,17 @@ def report_status(user_id):
         abort(400, f'无效状态，可选值: {", ".join(sorted(VALID_STATUSES))}')
 
     record = UserStatus(user_id=user_id, status=status)
+
+    reported_at = data.get('reported_at')
+    if reported_at:
+        try:
+            dt = datetime.fromisoformat(reported_at)
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            record.reported_at = dt
+        except (ValueError, TypeError):
+            abort(400, 'reported_at 格式错误，应为 ISO 时间')
+
     db.session.add(record)
     db.session.commit()
 
