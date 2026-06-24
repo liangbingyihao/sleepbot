@@ -786,11 +786,13 @@ PATCH /assets/materials/<material_id>/status
 
 所有报告均返回用户睡眠配置（`custom_sleep_time` 字符串、`sleep_is_unhealthy` 布尔），前端据此渲染时段文案和健康警示。
 
+三个接口均支持可选参数 `?friend_id=xxx`，传入时查看好友的报告（需为 accepted 好友关系）。
+
 ### 6.1 日报
 
 ```
 GET /report/daily?date=YYYY-MM-DD
-```
+GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
 
 **请求头**: `X-User-Id` 必填。
 
@@ -833,6 +835,7 @@ GET /report/daily?date=YYYY-MM-DD
 
 ```
 GET /report/weekly?date=YYYY-MM-DD
+GET /report/weekly?date=YYYY-MM-DD&friend_id=xxx
 ```
 
 取该日期所在周的周一~周日。
@@ -881,6 +884,7 @@ GET /report/weekly?date=YYYY-MM-DD
 
 ```
 GET /report/monthly?month=YYYY-MM
+GET /report/monthly?month=YYYY-MM&friend_id=xxx
 ```
 
 **响应示例**:

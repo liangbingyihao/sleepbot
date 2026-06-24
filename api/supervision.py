@@ -281,4 +281,6 @@ def get_friends(user_id):
     next_poll = min(poll_times) if poll_times else fallback
     next_poll_at = next_poll.strftime('%Y-%m-%d %H:%M:%S')
 
+    result.sort(key=lambda f: (f['sleep_config'] is None, f['friendship_id']))
+
     return ok({'friends': result, 'next_poll_at': next_poll_at})

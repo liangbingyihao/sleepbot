@@ -13,7 +13,7 @@ import pytz
 
 from flask import Blueprint, request, abort, g
 
-from models import db, UserStatus, SleepConfig
+from models import db, UserStatus, SleepConfig, Friendship
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -279,6 +279,26 @@ def _build_day_list(cfg, user_id, days):
     return result
 
 
+def _resolve_target(request_user_id):
+    """解析报告查询对象：若传了 friend_id 则校验好友关系，否则返回请求者自己"""
+    friend_id = request.args.get('friend_id', '')
+    if not friend_id:
+        return request_user_id
+
+    ok = Friendship.query.filter(
+        db.or_(
+            db.and_(Friendship.from_user_id == request_user_id,
+                    Friendship.to_user_id == friend_id),
+            db.and_(Friendship.from_user_id == friend_id,
+                    Friendship.to_user_id == request_user_id),
+        ),
+        Friendship.status == 'accepted',
+    ).first()
+    if not ok:
+        abort(403, '不是好友关系')
+    return friend_id
+
+
 # ====== API 端点 ======
 #
 # 三个报告接口结构相似：
@@ -294,7 +314,8 @@ def _build_day_list(cfg, user_id, days):
 def daily_report(user_id):
     """日报：单晚睡眠报告
 
-    Query: ?date=YYYY-MM-DD
+    Query: ?date=YYYY-MM-DD&friend_id=xxx
+    friend_id 可选，传入时查看好友的报告
     """
     date_str = request.args.get('date', '')
     try:
@@ -302,12 +323,13 @@ def daily_report(user_id):
     except (ValueError, TypeError):
         abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
-    cfg = _get_config(user_id)
+    target_id = _resolve_target(user_id)
+    cfg = _get_config(target_id)
     if not cfg:
         abort(404, '未找到睡眠配置')
 
     start, end = _night_window(cfg, d)
-    lock_s = _calc_lock_seconds(user_id, start, end)
+    lock_s = _calc_lock_seconds(target_id, start, end)
     total_sec = cfg.total_custom_minutes * 60
 
     # 无数据 → 空态
@@ -326,18 +348,18 @@ def daily_report(user_id):
             'save_tip': '',
         })
 
-    unlock = _calc_unlock_count(user_id, start, end)
+    unlock = _calc_unlock_count(target_id, start, end)
     status = _daily_status(lock_s, total_sec)
 
     # 挽回时长：基线 ≥3晚 且 当日挽回 ≥0 才展示
-    baseline, total_nights = _calc_baseline(user_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, cfg)
     show_save = False
     save_time = ''
     save_seconds = 0
     save_tip = ''
 
     if baseline is not None:
-        saved, show_save = _calc_saved_time(user_id, cfg, baseline, d)
+        saved, show_save = _calc_saved_time(target_id, cfg, baseline, d)
         if show_save:
             save_seconds = saved
             save_time = _fmt_duration(saved)
@@ -375,7 +397,8 @@ def weekly_report(user_id):
     except (ValueError, TypeError):
         abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
-    cfg = _get_config(user_id)
+    target_id = _resolve_target(user_id)
+    cfg = _get_config(target_id)
     if not cfg:
         abort(404, '未找到睡眠配置')
 
@@ -391,11 +414,11 @@ def weekly_report(user_id):
 
     for day in days:
         start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(user_id, start, end)
+        lock_s = _calc_lock_seconds(target_id, start, end)
         if lock_s > 0:
             days_with_data += 1
             total_lock += lock_s
-            total_unlock += _calc_unlock_count(user_id, start, end)
+            total_unlock += _calc_unlock_count(target_id, start, end)
             day_type = _daily_status(lock_s, total_sec)
             if day_type == 'success':
                 success_count += 1
@@ -428,9 +451,9 @@ def weekly_report(user_id):
     prev_with_data = 0
     for day in prev_days:
         start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(user_id, start, end)
+        lock_s = _calc_lock_seconds(target_id, start, end)
         if lock_s > 0:
-            prev_unlock += _calc_unlock_count(user_id, start, end)
+            prev_unlock += _calc_unlock_count(target_id, start, end)
             prev_with_data += 1
 
     show_rate = prev_with_data >= 7
@@ -441,15 +464,15 @@ def weekly_report(user_id):
             rate = round((prev_avg - avg_unlock) / prev_avg * 100)
 
     # 挽回时长
-    baseline, total_nights = _calc_baseline(user_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, cfg)
     total_save_hour = ''
     if baseline is not None:
         total_save = 0
         has_save = False
         for day in days:
             start, end = _night_window(cfg, day)
-            if _calc_lock_seconds(user_id, start, end) > 0:
-                saved, show = _calc_saved_time(user_id, cfg, baseline, day)
+            if _calc_lock_seconds(target_id, start, end) > 0:
+                saved, show = _calc_saved_time(target_id, cfg, baseline, day)
                 if show and saved >= 0:
                     total_save += saved
                     has_save = True
@@ -486,7 +509,8 @@ def monthly_report(user_id):
     except (ValueError, IndexError, TypeError):
         abort(400, 'month 格式错误，应为 YYYY-MM')
 
-    cfg = _get_config(user_id)
+    target_id = _resolve_target(user_id)
+    cfg = _get_config(target_id)
     if not cfg:
         abort(404, '未找到睡眠配置')
 
@@ -509,11 +533,11 @@ def monthly_report(user_id):
 
     for day in days:
         start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(user_id, start, end)
+        lock_s = _calc_lock_seconds(target_id, start, end)
         if lock_s > 0:
             days_with_data += 1
             total_lock += lock_s
-            total_unlock += _calc_unlock_count(user_id, start, end)
+            total_unlock += _calc_unlock_count(target_id, start, end)
             day_type = _daily_status(lock_s, total_sec)
             if day_type == 'success':
                 success_count += 1
@@ -547,13 +571,13 @@ def monthly_report(user_id):
     prev_with_data = 0
     for day in prev_days:
         start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(user_id, start, end)
+        lock_s = _calc_lock_seconds(target_id, start, end)
         if lock_s > 0:
-            prev_unlock += _calc_unlock_count(user_id, start, end)
+            prev_unlock += _calc_unlock_count(target_id, start, end)
             prev_with_data += 1
 
     # 挽回时长
-    baseline, total_nights = _calc_baseline(user_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, cfg)
     show_save = False
     month_save_hour = ''
     if baseline is not None:
@@ -561,8 +585,8 @@ def monthly_report(user_id):
         has_save = False
         for day in days:
             start, end = _night_window(cfg, day)
-            if _calc_lock_seconds(user_id, start, end) > 0:
-                saved, show = _calc_saved_time(user_id, cfg, baseline, day)
+            if _calc_lock_seconds(target_id, start, end) > 0:
+                saved, show = _calc_saved_time(target_id, cfg, baseline, day)
                 if show and saved >= 0:
                     total_save += saved
                     has_save = True
