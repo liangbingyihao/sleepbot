@@ -9,6 +9,8 @@
 #   5. 三档判定：success(>87.5%) / warning(≥62.5%) / danger(<62.5%)，基于时段总时长比例
 from datetime import datetime, timedelta, date, time
 
+import pytz
+
 from flask import Blueprint, request, abort, g
 
 from models import db, UserStatus, SleepConfig
@@ -83,19 +85,23 @@ def _get_config(user_id):
 
 
 def _night_window(cfg, d):
-    """返回用户自定义睡眠窗口 (start_dt, end_dt) UTC
+    """返回用户睡眠窗口转为 UTC 的 (start_dt, end_dt)
 
-    例如：22:30–06:30 → 22:30(d) ~ 06:30(d+1)
-    自动处理跨午夜情况：end ≤ start 时 end 加一天
+    d 为用户本地日期。例如 Asia/Shanghai 用户设置 23:00–07:00：
+    d=2026-06-22 → 23:00 CST ~ 07:00 CST = 15:00 UTC ~ 23:00 UTC
     """
+    tz = pytz.timezone(cfg.timezone)
     sh, sm = cfg.sleep_start_time.hour, cfg.sleep_start_time.minute
     eh, em = cfg.sleep_end_time.hour, cfg.sleep_end_time.minute
 
-    start = datetime(d.year, d.month, d.day, sh, sm, 0)
-    end = datetime(d.year, d.month, d.day, eh, em, 0)
-    if end <= start:
-        end += timedelta(days=1)
-    return start, end
+    local_start = datetime(d.year, d.month, d.day, sh, sm, 0)
+    local_end = datetime(d.year, d.month, d.day, eh, em, 0)
+    if local_end <= local_start:
+        local_end += timedelta(days=1)
+
+    start_utc = tz.localize(local_start).astimezone(pytz.utc).replace(tzinfo=None)
+    end_utc = tz.localize(local_end).astimezone(pytz.utc).replace(tzinfo=None)
+    return start_utc, end_utc
 
 
 def _get_statuses(user_id, start, end):
@@ -177,36 +183,30 @@ def _fmt_sleep_window(cfg):
 def _calc_baseline(user_id, cfg):
     """计算个人基线：最早3晚平均玩手机时长（秒）
 
-    返回 (baseline_play_seconds, total_nights)
-    总数 <3 时 baseline 为 None
+    从90天前的本地日期开始，依次检查每夜是否有数据，
+    取最早3晚计算平均玩手机时长。
+    返回 (baseline_play_seconds, total_nights)，总数<3时 baseline 为 None
     """
-    now = datetime.utcnow()
-    ninety_days_ago = now - timedelta(days=90)
+    tz = pytz.timezone(cfg.timezone)
+    now_utc = datetime.utcnow()
+    local_today = tz.fromutc(now_utc).date()
+    first_day = local_today - timedelta(days=90)
 
     total_sec = cfg.total_custom_minutes * 60
-
-    dates_with_data = (
-        db.session.query(db.func.date(UserStatus.reported_at))
-        .filter(UserStatus.user_id == user_id)
-        .filter(UserStatus.reported_at >= ninety_days_ago)
-        .group_by(db.func.date(UserStatus.reported_at))
-        .order_by(db.func.date(UserStatus.reported_at).asc())
-        .all()
-    )
-
-    if len(dates_with_data) < _BASELINE_MIN_NIGHTS:
-        return None, len(dates_with_data)
-
-    first_three = [r[0] for r in dates_with_data[:3]]
-    play_times = []
-    for d in first_three:
-        if isinstance(d, str):
-            d = date.fromisoformat(d)
+    nights = []
+    d = first_day
+    while d <= local_today and len(nights) < _BASELINE_MIN_NIGHTS:
         start, end = _night_window(cfg, d)
         lock_s = _calc_lock_seconds(user_id, start, end)
-        play_times.append(total_sec - lock_s)
+        if lock_s > 0:
+            nights.append(lock_s)
+        d += timedelta(days=1)
 
-    return sum(play_times) // len(play_times), len(dates_with_data)
+    if len(nights) < _BASELINE_MIN_NIGHTS:
+        return None, len(nights)
+
+    play_times = [total_sec - s for s in nights[:3]]
+    return sum(play_times) // len(play_times), len(nights)
 
 
 def _calc_saved_time(user_id, cfg, base_play, d):

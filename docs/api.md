@@ -109,18 +109,15 @@ GET /profile
   "data": {
     "id": 1,
     "user_id": "user123",
-    "sleep_start_time": "23:00",
-    "sleep_end_time": "08:00",
-    "timezone": "Asia/Shanghai",
-    "sleep_is_unhealthy": false,
-    "total_custom_minutes": 540,
+    "nickname": "张三",
+    "avatar_url": "https://...",
+    "region": "cn",
+    "source_code": "ABC123",
     "created_at": "2026-05-25 10:00:00",
     "updated_at": "2026-05-25 10:00:00"
   }
 }
 ```
-
-`sleep_is_unhealthy`: 用户自定义时段 <6h 时标记为 true。`total_custom_minutes`: 自定义时段总分钟数（跨午夜自动 +24h）。
 
 ### 1.2 初始化用户信息
 
@@ -132,12 +129,13 @@ POST /profile
 ```json
 {
   "nickname": "张三",
+  "avatar_url": "https://...",
   "region": "cn",
   "source_code": "ABC123"
 }
 ```
 
-所有字段可选。`source_code` 为用户输入的其他用户的邀请码。
+所有字段可选。
 
 **响应示例**: 同获取接口。
 
@@ -490,24 +488,42 @@ GET /friends
 ```json
 {
   "code": "OK",
-  "data": [
-    {
-      "friendship_id": 1,
-      "user_id": "friend_user_id",
-      "friend_name": "小张",
-      "apply_message": "",
-      "created_at": "2026-05-25 10:00:00",
-      "sleep_config": {
-        "sleep_start_time": "23:00",
-        "sleep_end_time": "08:00"
-      },
-      "latest_status": {
-        "status": "locked",
-        "reported_at": "2026-05-25 22:30:00"
+  "data": {
+    "friends": [
+      {
+        "friendship_id": 1,
+        "user_id": "friend_user_id",
+        "friend_name": "张小凡",
+        "friend_avatar": "https://...",
+        "apply_message": "",
+        "created_at": "2026-05-25 10:00:00",
+        "sleep_config": {
+          "sleep_start_time": "23:00",
+          "sleep_end_time": "08:00"
+        },
+        "sleep_status": "locked"
       }
-    }
-  ]
+    ],
+    "next_poll_at": "2026-06-24 15:01:00"
+  }
 }
+```
+
+`sleep_status` 由服务端根据好友的睡眠配置和最新状态计算：
+
+| 值 | 判定 |
+|------|------|
+| `awake` | 当前时间不在好友睡眠时段内 |
+| `unlocked` | 在睡眠时段内，且好友上报过解锁操作（最新状态非 locked） |
+| `locked` | 在睡眠时段内，好友未上报解锁操作（最新状态为 locked 或无数据） |
+| `no_config` | 好友未配置睡眠时间 |
+
+`sleep_status` 仅在好友处于睡眠时段时查询 `user_status` 表，否则直接返回 `awake`，零额外查询。
+
+`next_poll_at` 为客户端下一次应轮询的 UTC 时间，算法：取所有好友窗口结束时间（在窗口内）和窗口开始时间（不在窗口内）的最早值，最小间隔 60 秒保底。客户端只需：
+
+```
+setTimeout(() => GET /friends, next_poll_at - now)
 ```
 
 ### 4.8 解锁题库

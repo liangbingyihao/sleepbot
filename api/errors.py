@@ -1,4 +1,6 @@
-from flask import jsonify
+import traceback
+
+from flask import jsonify, request
 from werkzeug.exceptions import HTTPException
 
 from models import db
@@ -56,6 +58,20 @@ def err(status_code, msg=None):
     return jsonify({'code': code, 'msg': msg}), status_code
 
 
+def _log_error(app, status_code, message, exc=None):
+    user = request.headers.get('X-User-Id', '-')
+    method = request.method
+    path = request.path
+    line = f'[{user}] {method} {path} → {status_code}: {message}'
+
+    if app.debug and exc:
+        app.logger.error('%s\n%s', line, ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    elif app.debug:
+        app.logger.error('%s', line)
+    elif status_code >= 500:
+        app.logger.error('%s', line)
+
+
 def ok(data=None, msg=None):
     body = {'code': OK}
     if data is not None:
@@ -76,28 +92,38 @@ class AppError(Exception):
 def register_error_handlers(app):
     @app.errorhandler(AppError)
     def handle_app_error(e):
+        _log_error(app, e.status_code, e.message)
         return jsonify({'code': e.code, 'msg': e.message}), e.status_code
 
     @app.errorhandler(400)
     def handle_400(e):
-        return err(400, e.description)
+        msg = e.description
+        _log_error(app, 400, msg or _DEFAULT_MSG[400])
+        return err(400, msg)
 
     @app.errorhandler(404)
     def handle_404(e):
-        return err(404, e.description)
+        msg = e.description
+        _log_error(app, 404, msg or _DEFAULT_MSG[404])
+        return err(404, msg)
 
     @app.errorhandler(405)
     def handle_405(e):
-        return err(405, e.description)
+        msg = e.description
+        _log_error(app, 405, msg or _DEFAULT_MSG[405])
+        return err(405, msg)
 
     @app.errorhandler(500)
     def handle_500(e):
         db.session.rollback()
+        _log_error(app, 500, str(e), exc=e)
         return err(500)
 
     @app.errorhandler(Exception)
     def handle_unhandled(e):
         db.session.rollback()
         if isinstance(e, HTTPException):
+            _log_error(app, e.code, e.description or _DEFAULT_MSG.get(e.code, str(e)))
             return err(e.code, e.description)
+        _log_error(app, 500, str(e), exc=e)
         return err(500)

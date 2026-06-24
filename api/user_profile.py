@@ -30,6 +30,7 @@ def init_profile(user_id):
     profile = UserProfile(
         user_id=user_id,
         nickname=(data.get('nickname') or '').strip(),
+        avatar_url=(data.get('avatar_url') or '').strip(),
         region=(data.get('region') or '').strip(),
         source_code=(data.get('source_code') or '').strip(),
     )

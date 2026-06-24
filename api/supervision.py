@@ -1,6 +1,9 @@
+from datetime import datetime, time, timedelta
+
+import pytz
 from flask import Blueprint, request, abort
 
-from models import db, Friendship, SleepConfig, UserStatus
+from models import db, Friendship, SleepConfig, UserProfile, UserStatus
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -149,6 +152,87 @@ def update_friend_name(user_id, friendship_id):
     return ok(friendship.to_dict())
 
 
+def _resolve_window(cfg):
+    """根据当前时间和睡眠配置，计算 (in_window, local_date)
+
+    in_window: 当前是否落在睡眠时段内
+    local_date: 所在窗口的本地日期（在窗口内时取窗口日期；不在时取下个窗口日期）
+    """
+    if not cfg:
+        return False, None
+
+    tz = pytz.timezone(cfg.timezone)
+    local_dt = tz.fromutc(datetime.utcnow())
+    local_t = local_dt.time()
+    start = cfg.sleep_start_time
+    end = cfg.sleep_end_time
+
+    if start < end:
+        in_window = start <= local_t <= end
+        local_date = local_dt.date()
+        if not in_window and local_t >= end:
+            local_date += timedelta(days=1)
+    else:
+        in_window = local_t >= start or local_t <= end
+        local_date = local_dt.date()
+        if in_window and local_t < start:
+            local_date -= timedelta(days=1)
+        elif not in_window and local_t > end:
+            pass
+    return in_window, local_date
+
+
+def _next_window_utc(cfg):
+    """返回最近一个睡眠窗口的 UTC 起止时间
+
+    若当前落在窗口内 → 当前窗口；否则 → 即将到来的下个窗口
+    返回 (start_str, end_str, is_active, start_dt, end_dt) 或 None
+    """
+    in_window, local_date = _resolve_window(cfg)
+    if local_date is None:
+        return None
+    ws, we = _local_night_to_utc(cfg, local_date)
+    return ws.strftime('%Y-%m-%d %H:%M:%S'), we.strftime('%Y-%m-%d %H:%M:%S'), in_window, ws, we
+
+
+def _sleep_status(cfg, user_id):
+    """计算当前 sleep_status
+
+    返回: 'awake' | 'unlocked' | 'locked' | 'no_config'
+    仅当落在睡眠时段内时，才查 DB：存在非 locked 记录才判 unlocked
+    """
+    in_window, local_date = _resolve_window(cfg)
+    if local_date is None:
+        return 'no_config'
+    if not in_window:
+        return 'awake'
+
+    window_start, window_end = _local_night_to_utc(cfg, local_date)
+    unlocked = UserStatus.query.filter(
+        UserStatus.user_id == user_id,
+        UserStatus.reported_at >= window_start,
+        UserStatus.reported_at < window_end,
+        UserStatus.status == 'active',
+    ).first()
+    return 'unlocked' if unlocked else 'locked'
+
+
+def _local_night_to_utc(cfg, local_date):
+    """将本地日期的睡眠窗口转为 UTC (start, end)"""
+    tz = pytz.timezone(cfg.timezone)
+    sh, sm = cfg.sleep_start_time.hour, cfg.sleep_start_time.minute
+    eh, em = cfg.sleep_end_time.hour, cfg.sleep_end_time.minute
+
+    local_start = datetime(local_date.year, local_date.month, local_date.day, sh, sm, 0)
+    local_end = datetime(local_date.year, local_date.month, local_date.day, eh, em, 0)
+    if local_end <= local_start:
+        local_end += timedelta(days=1)
+
+    start_utc = tz.localize(local_start).astimezone(pytz.utc).replace(tzinfo=None)
+    end_utc = tz.localize(local_end).astimezone(pytz.utc).replace(tzinfo=None)
+    return start_utc, end_utc
+
+
 @supervision_bp.route('/friends', methods=['GET'])
 @require_user_id
 def get_friends(user_id):
@@ -160,28 +244,41 @@ def get_friends(user_id):
     ).all()
 
     result = []
+    poll_times = []
+    now_utc = datetime.utcnow()
+    fallback = now_utc + timedelta(seconds=60)
+
     for f in friendships:
         if f.from_user_id == user_id:
             friend_id = f.to_user_id
-            friend_name = f.to_name or friend_id
         else:
             friend_id = f.from_user_id
-            friend_name = f.from_name or friend_id
 
         sleep_config = SleepConfig.query.filter_by(user_id=friend_id).first()
-        latest_status = UserStatus.query \
-            .filter_by(user_id=friend_id) \
-            .order_by(UserStatus.reported_at.desc()) \
-            .first()
+        profile = UserProfile.query.filter_by(user_id=friend_id).first()
+        window = _next_window_utc(sleep_config)
 
         result.append({
             'friendship_id': f.id,
             'user_id': friend_id,
-            'friend_name': friend_name,
+            'friend_name': profile.nickname if profile else '',
+            'friend_avatar': profile.avatar_url if profile else '',
             'apply_message': f.apply_message if f.from_user_id != user_id else '',
             'created_at': f.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'sleep_config': sleep_config.to_dict() if sleep_config else None,
-            'latest_status': latest_status.to_dict() if latest_status else None,
+            'sleep_status': _sleep_status(sleep_config, friend_id),
         })
 
-    return ok(result)
+        if window:
+            _, _, active, ws_dt, we_dt = window
+            if active:
+                # 在窗口内：窗口结束时或 60 秒后，取较早者
+                poll_times.append(min(we_dt, fallback))
+            elif ws_dt > now_utc:
+                # 不在窗口内：窗口开始时刷新
+                poll_times.append(ws_dt)
+
+    next_poll = min(poll_times) if poll_times else fallback
+    next_poll_at = next_poll.strftime('%Y-%m-%d %H:%M:%S')
+
+    return ok({'friends': result, 'next_poll_at': next_poll_at})

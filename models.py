@@ -90,6 +90,7 @@ class UserProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
     nickname = db.Column(db.String(64), default='')
+    avatar_url = db.Column(db.String(256), default='')
     region = db.Column(db.String(64), default='')
     source_code = db.Column(db.String(64), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -100,6 +101,7 @@ class UserProfile(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'nickname': self.nickname or '',
+            'avatar_url': self.avatar_url or '',
             'region': self.region or '',
             'source_code': self.source_code or '',
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
