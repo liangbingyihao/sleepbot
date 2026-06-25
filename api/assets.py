@@ -2,15 +2,13 @@ import uuid
 import logging
 from datetime import datetime, timedelta
 
-import json
-from pathlib import Path
-
-from flask import Blueprint, request, abort, current_app, send_from_directory
+from flask import Blueprint, request, abort, current_app, send_from_directory, g
 from werkzeug.utils import secure_filename
 
-from models import db, UploadSession, UserOssFile
+from models import db, UploadSession, UserOssFile, SystemMaterial
 from api.utils import require_user_id
 from api.errors import ok
+from api.assets_oss import get_bucket, presign_url, upload_to_oss, delete_from_oss
 
 assets_bp = Blueprint('assets', __name__)
 _logger = logging.getLogger(__name__)
@@ -21,74 +19,6 @@ _ALLOWED_MIME = {
 }
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
-
-
-def _get_bucket(region):
-    if region and region.strip().lower() == 'cn':
-        return current_app.config['OSS_BUCKET_CN']
-    return current_app.config['OSS_BUCKET_SG']
-
-
-def _get_endpoint(bucket):
-    cfg = current_app.config
-    if bucket == cfg['OSS_BUCKET_SG']:
-        return cfg['OSS_ENDPOINT_SG']
-    return cfg['OSS_ENDPOINT_CN']
-
-
-def _get_oss_client(endpoint):
-    from alibabacloud_oss_v2 import Config, Client
-    from alibabacloud_oss_v2.credentials import StaticCredentialsProvider
-    cfg = current_app.config
-
-    region = endpoint.split('.')[0].replace('oss-', '', 1) if 'oss-' in endpoint else ''
-
-    return Client(Config(
-        region=region,
-        endpoint=endpoint,
-        credentials_provider=StaticCredentialsProvider(
-            access_key_id=cfg['OSS_ACCESS_KEY_ID'],
-            access_key_secret=cfg['OSS_ACCESS_KEY_SECRET'],
-        ),
-    ))
-
-
-def _presign_url(bucket, key):
-    import alibabacloud_oss_v2 as oss
-    client = _get_oss_client(_get_endpoint(bucket))
-    result = client.presign(
-        oss.GetObjectRequest(bucket=bucket, key=key),
-    )
-    return result.url
-
-
-def _upload_to_oss(bucket, key, file_data, mime_type):
-    import alibabacloud_oss_v2 as oss
-    endpoint = _get_endpoint(bucket)
-    _logger.debug('_upload_to_oss bucket=%s key=%s endpoint=%s mime=%s data_len=%s',
-                  bucket, key, endpoint, mime_type, len(file_data))
-    client = _get_oss_client(endpoint)
-    client.put_object(
-        oss.PutObjectRequest(
-            bucket=bucket,
-            key=key,
-            body=file_data,
-            content_type=mime_type,
-        ),
-    )
-    _logger.debug('_upload_to_oss done bucket=%s key=%s', bucket, key)
-
-
-def _delete_from_oss(bucket, key):
-    import alibabacloud_oss_v2 as oss
-    if not bucket or not key:
-        _logger.debug('_delete_from_oss skipped bucket=%s key=%s', bucket, key)
-        return
-    endpoint = _get_endpoint(bucket)
-    _logger.debug('_delete_from_oss bucket=%s key=%s endpoint=%s', bucket, key, endpoint)
-    client = _get_oss_client(endpoint)
-    client.delete_object(oss.DeleteObjectRequest(bucket=bucket, key=key))
-    _logger.debug('_delete_from_oss done bucket=%s key=%s', bucket, key)
 
 
 @assets_bp.route('/assets/session', methods=['POST'])
@@ -160,15 +90,13 @@ def upload_file(session_id):
         _logger.warning('upload_file invalid type=%s, session_id=%s', file_type, session_id)
         abort(400, 'type 必须为 image、audio 或 text')
 
-    if file_type in ('image', 'audio'):
-        limit = current_app.config.get('MATERIAL_LIMIT', 5)
-        count = UserOssFile.query.filter_by(user_id=user_id).filter(
-            UserOssFile.status != 'rejected',
-            UserOssFile.file_type.in_(['image', 'audio']),
-        ).count()
-        if count >= limit:
-            _logger.warning('upload_file material limit reached, user_id=%s, limit=%s', user_id, limit)
-            abort(400, '该好友的素材库已满，无法继续上传')
+    limit = current_app.config.get('MATERIAL_LIMIT', 30)
+    count = UserOssFile.query.filter_by(user_id=user_id).filter(
+        UserOssFile.source_system_material_id == 0
+    ).count()
+    if count >= limit:
+        _logger.warning('upload_file material limit reached, user_id=%s, limit=%s', user_id, limit)
+        abort(400, '该好友的素材库已满，无法继续上传')
 
     record = UserOssFile(
         user_id=user_id,
@@ -214,12 +142,12 @@ def upload_file(session_id):
         from models import UserProfile
         profile = UserProfile.query.filter_by(user_id=user_id).first()
         region = profile.region if profile else 'cn'
-        bucket = _get_bucket(region)
+        bucket = get_bucket(region)
 
         _logger.info('upload_file oss start, bucket=%s, key=%s, session_id=%s',
                      bucket, object_key, session_id)
         try:
-            _upload_to_oss(bucket, object_key, f.read(), mime)
+            upload_to_oss(bucket, object_key, f.read(), mime)
         except Exception as e:
             _logger.error('upload_file oss upload failed, bucket=%s, key=%s, error=%s',
                           bucket, object_key, str(e), exc_info=True)
@@ -239,26 +167,66 @@ def upload_file(session_id):
     return ok({'msg': '上传成功，感谢你的鼓励！'})
 
 
+
+
 @assets_bp.route('/assets/materials', methods=['GET'])
 @require_user_id
 def get_materials(user_id):
-    files = UserOssFile.query.filter_by(user_id=user_id).filter(UserOssFile.status != 'rejected').order_by(UserOssFile.created_at.desc()).all()
+    locale = g.locale if hasattr(g, 'locale') and g.locale else 'zh-CN'
 
-    result = []
-    for f in files:
+    sys_items = SystemMaterial.query.filter_by(locale=locale, is_active=True).order_by(SystemMaterial.sort_order.asc()).all()
+    all_files = UserOssFile.query.filter_by(user_id=user_id).order_by(UserOssFile.created_at.desc()).all()
+
+    if not all_files:
+        for ft in ('text', 'audio'):
+            default = next((m for m in sys_items if m.file_type == ft), None)
+            if default:
+                m = UserOssFile(
+                    user_id=user_id,
+                    session_id='_system_',
+                    friend_name='',
+                    file_type=default.file_type,
+                    source_system_material_id=default.id,
+                    status='approved',
+                )
+                db.session.add(m)
+        db.session.commit()
+        all_files = UserOssFile.query.filter_by(user_id=user_id).order_by(UserOssFile.created_at.desc()).all()
+
+    adopted_map = {}
+    materials = []
+
+    # 系统素材（先展示）
+    for m in sys_items:
+        ref = None
+        for f in all_files:
+            if f.source_system_material_id == m.id:
+                ref = f
+                break
+        adopted_map[m.id] = ref
+        item = m.to_dict()
+        item['source'] = 'system'
+        item['status'] = 'approved' if ref and ref.status == 'approved' else 'pending'
+        if m.file_type in ('image', 'audio') and m.object_key:
+            item['presigned_url'] = presign_url(m.bucket, m.object_key)
+        materials.append(item)
+
+    # 好友素材（排后面），顺便计数
+    limit = current_app.config.get('MATERIAL_LIMIT', 30)
+    count = 0
+    for f in all_files:
+        if f.source_system_material_id:
+            continue
+        count += 1
         item = f.to_dict()
+        item['source'] = 'friend'
         if f.file_type in ('image', 'audio') and f.object_key:
-            item['presigned_url'] = _presign_url(f.bucket, f.object_key)
-        result.append(item)
+            item['presigned_url'] = presign_url(f.bucket, f.object_key)
+        materials.append(item)
 
-    limit = current_app.config.get('MATERIAL_LIMIT', 5)
-    count = UserOssFile.query.filter_by(user_id=user_id).filter(
-        UserOssFile.status != 'rejected',
-        UserOssFile.file_type.in_(['image', 'audio']),
-    ).count()
     full = count >= limit
 
-    return ok({'materials': result, 'full': full})
+    return ok({'materials': materials, 'full': full})
 
 
 @assets_bp.route('/assets/materials/<int:material_id>/status', methods=['PATCH'])
@@ -275,9 +243,11 @@ def review_material(user_id, material_id):
     material = UserOssFile.query.get(material_id)
     if not material:
         abort(404, '素材不存在')
-    if material.user_id != user_id:
+    if material.user_id != user_id or material.source_system_material_id:
         abort(403, '无权操作')
 
+    if material.status == new_status:
+        return ok(material.to_dict())
     valid = (
         (material.status == 'pending' and new_status in ('approved', 'rejected'))
         or (material.status == 'approved' and new_status == 'pending')
@@ -285,8 +255,12 @@ def review_material(user_id, material_id):
     if not valid:
         abort(400, '不允许该状态变更')
 
-    if new_status == 'rejected' and material.object_key:
-        _delete_from_oss(material.bucket, material.object_key)
+    if new_status == 'rejected':
+        if material.object_key:
+            delete_from_oss(material.bucket, material.object_key)
+        db.session.delete(material)
+        db.session.commit()
+        return ok(msg='已删除')
 
     if new_status == 'approved':
         old_approved = UserOssFile.query.filter_by(
@@ -300,3 +274,136 @@ def review_material(user_id, material_id):
     material.status = new_status
     db.session.commit()
     return ok(material.to_dict())
+
+
+@assets_bp.route('/assets/materials/system/<int:sys_id>/adopt', methods=['POST'])
+@require_user_id
+def adopt_system_material(user_id, sys_id):
+    """采用系统素材：建立引用记录并自动审批"""
+    src = SystemMaterial.query.get(sys_id)
+    if not src:
+        abort(404, '系统素材不存在')
+
+    # 同类型旧 approved → pending
+    old_approved = UserOssFile.query.filter_by(
+        user_id=user_id,
+        file_type=src.file_type,
+        status='approved'
+    ).all()
+    for old in old_approved:
+        old.status = 'pending'
+
+    m = UserOssFile.query.filter_by(
+        user_id=user_id,
+        source_system_material_id=sys_id,
+    ).first()
+    if m:
+        m.status = 'approved'
+    else:
+        m = UserOssFile(
+            user_id=user_id,
+            session_id='_system_',
+            friend_name='',
+            file_type=src.file_type,
+            source_system_material_id=sys_id,
+            status='approved',
+        )
+        db.session.add(m)
+    db.session.commit()
+    return ok(m.to_dict())
+
+
+@assets_bp.route('/assets/materials/system/<int:sys_id>/dismiss', methods=['DELETE'])
+@require_user_id
+def dismiss_system_material(user_id, sys_id):
+    """取消采用：逻辑删除，status → pending"""
+    m = UserOssFile.query.filter_by(
+        user_id=user_id,
+        session_id='_system_',
+        source_system_material_id=sys_id,
+    ).first()
+    if not m:
+        abort(404, '未采用该系统素材')
+
+    m.status = 'pending'
+    db.session.commit()
+    return ok(msg='已取消采用')
+
+
+# ====== 系统素材管理 ======
+
+
+@assets_bp.route('/assets/system_materials', methods=['GET'])
+@require_user_id
+def get_system_materials(user_id):
+    locale = g.locale if hasattr(g, 'locale') and g.locale else 'zh-CN'
+    items = SystemMaterial.query.filter_by(locale=locale).order_by(SystemMaterial.sort_order.asc()).all()
+    result = []
+    for m in items:
+        item = m.to_dict()
+        if m.file_type in ('image', 'audio') and m.object_key:
+            item['presigned_url'] = presign_url(m.bucket, m.object_key)
+        result.append(item)
+    return ok(result)
+
+
+@assets_bp.route('/assets/system_materials', methods=['POST'])
+@require_user_id
+def add_system_material(user_id):
+    """新增系统素材"""
+    data = request.get_json()
+    if not data:
+        abort(400, '请求体不能为空')
+
+    file_type = data.get('file_type', 'image')
+    locale = data.get('locale', 'zh-CN')
+
+    m = SystemMaterial(
+        file_type=file_type,
+        content_text=data.get('content_text', ''),
+        bucket=data.get('bucket', ''),
+        object_key=data.get('object_key', ''),
+        mime_type=data.get('mime_type', ''),
+        locale=locale,
+        sort_order=data.get('sort_order', 0),
+        is_active=data.get('is_active', True),
+    )
+    db.session.add(m)
+    db.session.commit()
+    return ok(m.to_dict())
+
+
+@assets_bp.route('/assets/system_materials/<int:material_id>', methods=['PUT'])
+@require_user_id
+def update_system_material(user_id, material_id):
+    """更新系统素材"""
+    data = request.get_json()
+    if not data:
+        abort(400, '请求体不能为空')
+
+    m = SystemMaterial.query.get(material_id)
+    if not m:
+        abort(404, '系统素材不存在')
+
+    for field in ('file_type', 'content_text', 'bucket', 'object_key',
+                  'mime_type', 'locale', 'sort_order', 'is_active'):
+        if field in data:
+            setattr(m, field, data[field])
+
+    db.session.commit()
+    return ok(m.to_dict())
+
+
+@assets_bp.route('/assets/system_materials/<int:material_id>', methods=['DELETE'])
+@require_user_id
+def delete_system_material(user_id, material_id):
+    """删除系统素材"""
+    m = SystemMaterial.query.get(material_id)
+    if not m:
+        abort(404, '系统素材不存在')
+
+    if m.object_key:
+        delete_from_oss(m.bucket, m.object_key)
+    db.session.delete(m)
+    db.session.commit()
+    return ok(msg='删除成功')

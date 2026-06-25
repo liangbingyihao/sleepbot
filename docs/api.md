@@ -37,6 +37,8 @@
   - [5.4 提交素材](#5-4-提交素材)
   - [5.5 获取收到的素材](#5-5-获取收到的素材)
   - [5.6 审核素材](#5-6-审核素材)
+  - [5.7 采用/取消系统素材](#5-7-采用-取消系统素材)
+  - [5.8 系统素材管理](#5-8-系统素材管理)
 - [6. 睡眠报告](#6-睡眠报告)
   - [6.1 日报](#6-1-日报)
   - [6.2 周报](#6-2-周报)
@@ -711,9 +713,10 @@ GET /assets/materials
 
 **请求头**: `X-User-Id` 必填。
 
-返回当前用户收到的素材，按时间倒序。`rejected` 的素材不会返回。图片和音频会附带 `presigned_url`（有效期 15 分钟）。`full` 字段标识图片/音频素材库是否已达上限（默认上限 5，可通过环境变量 `MATERIAL_LIMIT` 调整）。
+返回当前用户的全部素材，按 `source` 区分。系统素材在前，好友素材在后。
 
-**响应示例**:
+新用户首次访问时自动采用默认系统文本+语音。
+
 ```json
 {
   "code": "OK",
@@ -721,40 +724,35 @@ GET /assets/materials
     "materials": [
       {
         "id": 1,
-        "user_id": "user123",
-        "session_id": "a1b2c3d4-...",
-        "friend_name": "小明",
-        "file_type": "image",
-        "bucket": "cn-bucket",
-        "object_key": "assets/user123/a1b2c3d4-....jpg",
-        "content_text": "",
-        "file_size": 102400,
-        "mime_type": "image/jpeg",
-        "status": "pending",
-        "presigned_url": "https://...",
-        "created_at": "2026-05-25 10:00:00",
-        "updated_at": "2026-05-25 10:00:00"
+        "source": "system",
+        "status": "approved",
+        "file_type": "text",
+        "content_text": "早睡早起身体好",
+        ...
       },
       {
         "id": 2,
-        "user_id": "user123",
-        "session_id": "a1b2c3d4-...",
+        "source": "system",
+        "status": "pending",
+        "file_type": "text",
+        "content_text": "晚安好梦",
+        ...
+      },
+      {
+        "id": 5,
+        "source": "friend",
+        "status": "approved",
         "friend_name": "小红",
         "file_type": "text",
-        "bucket": "",
-        "object_key": "",
         "content_text": "早点休息哦！",
-        "file_size": 0,
-        "mime_type": "text/plain",
-        "status": "approved",
-        "presigned_url": null,
-        "created_at": "2026-05-25 10:00:00",
-        "updated_at": "2026-05-25 10:00:00"
+        ...
       }
     ],
     "full": false
   }
 }
+```
+
 ```
 
 ### 5.6 审核素材
@@ -772,9 +770,48 @@ PATCH /assets/materials/<material_id>/status
 }
 ```
 
-`status` 可选值：`approved`（采用）、`rejected`（丢弃）、`pending`（取消采用）。允许的状态变更：`pending` → `approved`/`rejected`，`approved` → `pending`。设为 `rejected` 时，对应的 OSS 文件会被删除。
+`status` 可选值：`approved`（采用）、`rejected`（丢弃，物理删除数据库记录和 OSS 文件）、`pending`（取消采用）。允许的状态变更：`pending` → `approved`/`rejected`，`approved` → `pending`。
 
 **响应示例**: 同素材对象。
+
+### 5.7 采用/取消系统素材
+
+```
+POST   /assets/materials/system/<sys_id>/adopt     # 采用：克隆为 UserOssFile(status=approved)
+DELETE /assets/materials/system/<sys_id>/dismiss   # 取消：标记该类型的系统克隆为 rejected
+```
+
+**采用**：将系统素材克隆到 `UserOssFile`（`session_id='_system_'`），同一类型的旧 approved 自动变 pending。
+
+**取消采用**：物理删除对应类型的 `_system_` 记录。取消后 `system` 段重新出现该系统素材。
+
+### 5.8 系统素材管理
+
+系统兜底全员可见的鼓励素材，按语言区分。
+
+```
+GET    /assets/system_materials   # 按当前 locale 返回活跃素材
+POST   /assets/system_materials   # 新增
+PUT    /assets/system_materials/<id>  # 更新
+DELETE /assets/system_materials/<id>  # 删除（同时删除 OSS 文件）
+```
+
+**GET** 自动从 `X-Language` 请求头读取 locale，只返回 `is_active=True` 的素材，按 `sort_order` 排序。
+
+**POST 请求体**:
+```json
+{
+  "file_type": "text",
+  "content_text": "早睡早起身体好",
+  "locale": "zh-CN",
+  "sort_order": 1,
+  "is_active": true
+}
+```
+
+**PUT**：任一字段均可部分更新。
+
+**响应**: 同 `SystemMaterial.to_dict()`。
 
 ## 6. 睡眠报告
 
