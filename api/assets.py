@@ -196,7 +196,8 @@ def get_materials(user_id):
     adopted_map = {}
     materials = []
 
-    # 系统素材（先展示）
+    materials = []
+
     for m in sys_items:
         ref = None
         for f in all_files:
@@ -207,11 +208,11 @@ def get_materials(user_id):
         item = m.to_dict()
         item['source'] = 'system'
         item['status'] = 'approved' if ref and ref.status == 'approved' else 'pending'
+        item['_ts'] = (ref.updated_at if ref and ref.status == 'approved' else m.updated_at).timestamp()
         if m.file_type in ('image', 'audio') and m.object_key:
             item['presigned_url'] = presign_url(m.bucket, m.object_key)
         materials.append(item)
 
-    # 好友素材（排后面），顺便计数
     limit = current_app.config.get('MATERIAL_LIMIT', 30)
     count = 0
     for f in all_files:
@@ -220,9 +221,15 @@ def get_materials(user_id):
         count += 1
         item = f.to_dict()
         item['source'] = 'friend'
+        item['_ts'] = f.updated_at.timestamp()
         if f.file_type in ('image', 'audio') and f.object_key:
             item['presigned_url'] = presign_url(f.bucket, f.object_key)
         materials.append(item)
+
+    materials.sort(key=lambda x: (x['status'] != 'approved', -x['_ts']))
+    for item in materials:
+        item.pop('_ts', None)
+        item.pop('updated_at', None)
 
     full = count >= limit
 
