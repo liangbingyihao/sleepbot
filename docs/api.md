@@ -713,7 +713,7 @@ GET /assets/materials
 
 **请求头**: `X-User-Id` 必填。
 
-返回当前用户的全部素材，按 `source` 区分。系统素材在前，好友素材在后。
+返回当前用户的全部素材（系统+好友），单数组合并，按 `status=approved` 优先、更新时间倒序排列。`source` 区分来源。
 
 新用户首次访问时自动采用默认系统文本+语音。
 
@@ -745,6 +745,7 @@ GET /assets/materials
         "friend_name": "小红",
         "file_type": "text",
         "content_text": "早点休息哦！",
+        "source_system_material_id": 0,
         ...
       }
     ],
@@ -753,7 +754,7 @@ GET /assets/materials
 }
 ```
 
-```
+`source_system_material_id`：>0 表示该素材引用于系统素材，取系统表中最新内容填充。
 
 ### 5.6 审核素材
 
@@ -777,13 +778,13 @@ PATCH /assets/materials/<material_id>/status
 ### 5.7 采用/取消系统素材
 
 ```
-POST   /assets/materials/system/<sys_id>/adopt     # 采用：克隆为 UserOssFile(status=approved)
-DELETE /assets/materials/system/<sys_id>/dismiss   # 取消：标记该类型的系统克隆为 rejected
+POST   /assets/materials/system/<sys_id>/adopt     # 采用：创建或更新引用记录
+DELETE /assets/materials/system/<sys_id>/dismiss   # 取消：status → pending
 ```
 
-**采用**：将系统素材克隆到 `UserOssFile`（`session_id='_system_'`），同一类型的旧 approved 自动变 pending。
+**采用**：建立 `source_system_material_id` 引用到 `UserOssFile`（`status='approved'`），同类型旧 approved 自动变 pending。若之前 dismiss 过则直接更新状态，不重复创建。
 
-**取消采用**：物理删除对应类型的 `_system_` 记录。取消后 `system` 段重新出现该系统素材。
+**取消采用**：对应引用记录 `status` 改为 `pending`，保留记录阻止重新自动初始化。`/assets/materials` 中不再展示该素材。
 
 ### 5.8 系统素材管理
 

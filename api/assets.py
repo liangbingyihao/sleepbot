@@ -137,7 +137,7 @@ def upload_file(session_id):
             abort(400, '文件大小不能超过 5MB')
 
         ext = secure_filename(f.filename).rsplit('.', 1)[-1] if '.' in f.filename else ''
-        object_key = f'assets/{user_id}/{uuid.uuid4()}.{ext}'
+        object_key = f'materials/{user_id}/{uuid.uuid4()}.{ext}'
 
         from models import UserProfile
         profile = UserProfile.query.filter_by(user_id=user_id).first()
