@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta
 import pytz
 from flask import Blueprint, request, abort
 
-from models import db, Friendship, SleepConfig, UserProfile, UserStatus
+from models import db, Friendship, SleepConfig, Users, UserStatus
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -21,16 +21,17 @@ def send_friend_request(user_id):
     if not to_user_id:
         abort(400, 'to_user_id 为必填')
 
-    if to_user_id == user_id:
-        abort(400, '不能向自己发送好友申请')
+    target = Users.query.filter_by(public_id=to_user_id).first()
+    if not target:
+        abort(404, '用户不存在')
 
     from_name = (data.get('from_name') or '').strip()
     to_name = (data.get('to_name') or '').strip()
 
     existing = Friendship.query.filter(
         db.or_(
-            db.and_(Friendship.from_user_id == user_id, Friendship.to_user_id == to_user_id),
-            db.and_(Friendship.from_user_id == to_user_id, Friendship.to_user_id == user_id),
+            db.and_(Friendship.from_user_id == user_id, Friendship.to_user_id == target.id),
+            db.and_(Friendship.from_user_id == target.id, Friendship.to_user_id == user_id),
         ),
         Friendship.status.in_(['pending', 'accepted']),
     ).first()
@@ -44,7 +45,7 @@ def send_friend_request(user_id):
 
     friendship = Friendship(
         from_user_id=user_id,
-        to_user_id=to_user_id,
+        to_user_id=target.id,
         apply_message=apply_message,
         from_name=from_name,
         to_name=to_name,
@@ -255,14 +256,14 @@ def get_friends(user_id):
             friend_id = f.from_user_id
 
         sleep_config = SleepConfig.query.filter_by(user_id=friend_id).first()
-        profile = UserProfile.query.filter_by(user_id=friend_id).first()
+        user = Users.query.filter_by(id=friend_id).first()
         window = _next_window_utc(sleep_config)
 
         result.append({
             'friendship_id': f.id,
             'user_id': friend_id,
-            'friend_name': profile.nickname if profile else '',
-            'friend_avatar': profile.avatar_url if profile else '',
+            'friend_name': user.display_name if user else '',
+            'friend_avatar': user.avatar if user else '',
             'apply_message': f.apply_message if f.from_user_id != user_id else '',
             'created_at': f.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'sleep_config': sleep_config.to_dict() if sleep_config else None,

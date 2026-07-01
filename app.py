@@ -10,7 +10,6 @@ from api.sleep_config import sleep_config_bp
 from api.status import status_bp
 from api.supervision import supervision_bp
 from api.configs import configs_bp
-from api.user_profile import profile_bp
 from api.assets import assets_bp
 from api.report import report_bp
 
@@ -30,7 +29,6 @@ def create_app():
     app.register_blueprint(status_bp, url_prefix='/api/sleep')
     app.register_blueprint(supervision_bp, url_prefix='/api/sleep')
     app.register_blueprint(configs_bp, url_prefix='/api/sleep')
-    app.register_blueprint(profile_bp, url_prefix='/api/sleep')
     app.register_blueprint(assets_bp, url_prefix='/api/sleep')
     app.register_blueprint(report_bp, url_prefix='/api/sleep')
 

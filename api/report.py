@@ -7,13 +7,13 @@
 #   3. 基线：最早3晚的平均玩手机时长（时段总时长 − 锁屏时长）
 #   4. 挽回时长：基线玩手机 − 当晚玩手机，≥0 展示，<0 隐藏
 #   5. 三档判定：success(>87.5%) / warning(≥62.5%) / danger(<62.5%)，基于时段总时长比例
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date
 
 import pytz
 
 from flask import Blueprint, request, abort, g
 
-from models import db, UserStatus, SleepConfig, Friendship
+from models import db, UserStatus, SleepConfig, SleepConfigHistory, Friendship
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -84,11 +84,30 @@ def _get_config(user_id):
     return SleepConfig.query.filter_by(user_id=user_id).first()
 
 
+def _get_config_for_night(user_id, end_utc):
+    """返回某夜结束时用户生效的睡眠配置（SleepConfigHistory 或 SleepConfig）
+
+    end_utc: 该夜窗口的 UTC 结束时间
+    优先查历史：取 effective_from > end_utc 中最早的一条（该配置在该夜仍有效）
+    无历史则用当前配置
+    返回对象 duck-type 兼容 sleep_start_time / sleep_end_time / timezone / sleep_is_unhealthy / total_custom_minutes
+    """
+    history = (
+        SleepConfigHistory.query
+        .filter_by(user_id=user_id)
+        .filter(SleepConfigHistory.effective_from > end_utc)
+        .order_by(SleepConfigHistory.effective_from.asc())
+        .first()
+    )
+    if history:
+        return history
+    return SleepConfig.query.filter_by(user_id=user_id).first()
+
+
 def _night_window(cfg, d):
     """返回用户睡眠窗口转为 UTC 的 (start_dt, end_dt)
 
-    d 为用户本地日期。例如 Asia/Shanghai 用户设置 23:00–07:00：
-    d=2026-06-22 → 23:00 CST ~ 07:00 CST = 15:00 UTC ~ 23:00 UTC
+    d 为用户本地日期。入参 cfg 可以是 SleepConfig 或 SleepConfigHistory（duck-type）
     """
     tz = pytz.timezone(cfg.timezone)
     sh, sm = cfg.sleep_start_time.hour, cfg.sleep_start_time.minute
@@ -180,42 +199,48 @@ def _fmt_sleep_window(cfg):
     return f'{s} – {e}'
 
 
-def _calc_baseline(user_id, cfg):
+def _calc_baseline(user_id, current_cfg):
     """计算个人基线：最早3晚平均玩手机时长（秒）
 
-    从90天前的本地日期开始，依次检查每夜是否有数据，
-    取最早3晚计算平均玩手机时长。
-    返回 (baseline_play_seconds, total_nights)，总数<3时 baseline 为 None
+    每夜使用该夜生效的 SleepConfig 计算窗口和总时长
     """
-    tz = pytz.timezone(cfg.timezone)
+    tz = pytz.timezone(current_cfg.timezone)
     now_utc = datetime.utcnow()
     local_today = tz.fromutc(now_utc).date()
     first_day = local_today - timedelta(days=90)
 
-    total_sec = cfg.total_custom_minutes * 60
-    nights = []
+    play_times = []
     d = first_day
-    while d <= local_today and len(nights) < _BASELINE_MIN_NIGHTS:
+    while d <= local_today and len(play_times) < _BASELINE_MIN_NIGHTS:
+        est_end = _night_window(current_cfg, d)[1]
+        cfg = _get_config_for_night(user_id, est_end)
+        if not cfg:
+            d += timedelta(days=1)
+            continue
         start, end = _night_window(cfg, d)
         lock_s = _calc_lock_seconds(user_id, start, end)
         if lock_s > 0:
-            nights.append(lock_s)
+            play = cfg.total_custom_minutes * 60 - lock_s
+            play_times.append(play)
         d += timedelta(days=1)
 
-    if len(nights) < _BASELINE_MIN_NIGHTS:
-        return None, len(nights)
+    if len(play_times) < _BASELINE_MIN_NIGHTS:
+        return None, len(play_times)
 
-    play_times = [total_sec - s for s in nights[:3]]
-    return sum(play_times) // len(play_times), len(nights)
+    return sum(play_times[:3]) // len(play_times[:3]), len(play_times)
 
 
-def _calc_saved_time(user_id, cfg, base_play, d):
+def _calc_saved_time(user_id, current_cfg, base_play, d):
     """计算单晚挽回时长
 
     base_play: 基线玩手机时长（秒）
     d: 计算日期
     返回 (saved_seconds, should_show)
     """
+    est_end = _night_window(current_cfg, d)[1]
+    cfg = _get_config_for_night(user_id, est_end)
+    if not cfg:
+        return 0, False
     start, end = _night_window(cfg, d)
     lock_s = _calc_lock_seconds(user_id, start, end)
     tonight_play = cfg.total_custom_minutes * 60 - lock_s
@@ -260,23 +285,22 @@ def _month_comment(avg_unlock, success_days, total_days, is_unhealthy):
     return text
 
 
-def _build_day_list(cfg, user_id, days):
-    """批量计算一组日期的锁屏数据和状态"""
-    result = []
-    for day in days:
-        start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(user_id, start, end)
-        if lock_s > 0:
-            result.append({
-                'day': str(day.day),
-                'type': _daily_status(lock_s, cfg.total_custom_minutes * 60),
-            })
-        else:
-            result.append({
-                'day': str(day.day),
-                'type': 'empty',
-            })
-    return result
+def _night_stats(user_id, current_cfg, day):
+    """计算单夜数据，使用该夜生效的配置
+
+    返回 (lock_seconds, unlock_count, day_type)
+    """
+    est_end = _night_window(current_cfg, day)[1]
+    cfg = _get_config_for_night(user_id, est_end)
+    if not cfg:
+        return 0, 0, 'empty'
+    start, end = _night_window(cfg, day)
+    lock_s = _calc_lock_seconds(user_id, start, end)
+    if lock_s <= 0:
+        return 0, 0, 'empty'
+    unlock = _calc_unlock_count(user_id, start, end)
+    day_type = _daily_status(lock_s, cfg.total_custom_minutes * 60)
+    return lock_s, unlock, day_type
 
 
 def _resolve_target(request_user_id):
@@ -324,20 +348,18 @@ def daily_report(user_id):
         abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
     target_id = _resolve_target(user_id)
-    cfg = _get_config(target_id)
-    if not cfg:
+    current_cfg = _get_config(target_id)
+    if not current_cfg:
         abort(404, '未找到睡眠配置')
 
-    start, end = _night_window(cfg, d)
-    lock_s = _calc_lock_seconds(target_id, start, end)
-    total_sec = cfg.total_custom_minutes * 60
+    lock_s, unlock, day_type = _night_stats(target_id, current_cfg, d)
 
     # 无数据 → 空态
     if lock_s <= 0:
         return ok({
             'type': 'day',
-            'custom_sleep_time': _fmt_sleep_window(cfg),
-            'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+            'custom_sleep_time': _fmt_sleep_window(current_cfg),
+            'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
             'lock_hour': '0分钟',
             'lock_seconds': 0,
             'unlock_count': 0,
@@ -348,18 +370,15 @@ def daily_report(user_id):
             'save_tip': '',
         })
 
-    unlock = _calc_unlock_count(target_id, start, end)
-    status = _daily_status(lock_s, total_sec)
-
     # 挽回时长：基线 ≥3晚 且 当日挽回 ≥0 才展示
-    baseline, total_nights = _calc_baseline(target_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, current_cfg)
     show_save = False
     save_time = ''
     save_seconds = 0
     save_tip = ''
 
     if baseline is not None:
-        saved, show_save = _calc_saved_time(target_id, cfg, baseline, d)
+        saved, show_save = _calc_saved_time(target_id, current_cfg, baseline, d)
         if show_save:
             save_seconds = saved
             save_time = _fmt_duration(saved)
@@ -371,12 +390,12 @@ def daily_report(user_id):
 
     return ok({
         'type': 'day',
-        'custom_sleep_time': _fmt_sleep_window(cfg),
-        'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+        'custom_sleep_time': _fmt_sleep_window(current_cfg),
+        'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
         'lock_hour': _fmt_duration(lock_s),
         'lock_seconds': lock_s,
         'unlock_count': unlock,
-        'day_type': status,
+        'day_type': day_type,
         'show_save_time': show_save,
         'save_hour': save_time,
         'save_seconds': save_seconds,
@@ -398,11 +417,10 @@ def weekly_report(user_id):
         abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
     target_id = _resolve_target(user_id)
-    cfg = _get_config(target_id)
-    if not cfg:
+    current_cfg = _get_config(target_id)
+    if not current_cfg:
         abort(404, '未找到睡眠配置')
 
-    total_sec = cfg.total_custom_minutes * 60
     monday = d - timedelta(days=d.weekday())
     days = [monday + timedelta(days=i) for i in range(7)]
 
@@ -413,24 +431,20 @@ def weekly_report(user_id):
     day_list = []
 
     for day in days:
-        start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(target_id, start, end)
+        lock_s, unlock, day_type = _night_stats(target_id, current_cfg, day)
         if lock_s > 0:
             days_with_data += 1
             total_lock += lock_s
-            total_unlock += _calc_unlock_count(target_id, start, end)
-            day_type = _daily_status(lock_s, total_sec)
+            total_unlock += unlock
             if day_type == 'success':
                 success_count += 1
-        else:
-            day_type = 'empty'
         day_list.append({'day': str(day.day), 'type': day_type})
 
     if days_with_data == 0:
         return ok({
             'type': 'week',
-            'custom_sleep_time': _fmt_sleep_window(cfg),
-            'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+            'custom_sleep_time': _fmt_sleep_window(current_cfg),
+            'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
             'total_lock_minute': 0,
             'total_lock_hour': '0小时',
             'success_day': 0,
@@ -450,10 +464,9 @@ def weekly_report(user_id):
     prev_unlock = 0
     prev_with_data = 0
     for day in prev_days:
-        start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(target_id, start, end)
+        lock_s, unlock, _ = _night_stats(target_id, current_cfg, day)
         if lock_s > 0:
-            prev_unlock += _calc_unlock_count(target_id, start, end)
+            prev_unlock += unlock
             prev_with_data += 1
 
     show_rate = prev_with_data >= 7
@@ -464,15 +477,15 @@ def weekly_report(user_id):
             rate = round((prev_avg - avg_unlock) / prev_avg * 100)
 
     # 挽回时长
-    baseline, total_nights = _calc_baseline(target_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, current_cfg)
     total_save_hour = ''
     if baseline is not None:
         total_save = 0
         has_save = False
         for day in days:
-            start, end = _night_window(cfg, day)
-            if _calc_lock_seconds(target_id, start, end) > 0:
-                saved, show = _calc_saved_time(target_id, cfg, baseline, day)
+            lock_s, _, _ = _night_stats(target_id, current_cfg, day)
+            if lock_s > 0:
+                saved, show = _calc_saved_time(target_id, current_cfg, baseline, day)
                 if show and saved >= 0:
                     total_save += saved
                     has_save = True
@@ -481,8 +494,8 @@ def weekly_report(user_id):
 
     return ok({
         'type': 'week',
-        'custom_sleep_time': _fmt_sleep_window(cfg),
-        'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+        'custom_sleep_time': _fmt_sleep_window(current_cfg),
+        'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
         'total_lock_minute': _fmt_minutes(total_lock),
         'total_lock_hour': _fmt_duration(total_lock),
         'success_day': success_count,
@@ -510,11 +523,9 @@ def monthly_report(user_id):
         abort(400, 'month 格式错误，应为 YYYY-MM')
 
     target_id = _resolve_target(user_id)
-    cfg = _get_config(target_id)
-    if not cfg:
+    current_cfg = _get_config(target_id)
+    if not current_cfg:
         abort(404, '未找到睡眠配置')
-
-    total_sec = cfg.total_custom_minutes * 60
 
     first_day = date(year, month, 1)
     if month == 12:
@@ -532,24 +543,20 @@ def monthly_report(user_id):
     day_list = []
 
     for day in days:
-        start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(target_id, start, end)
+        lock_s, unlock, day_type = _night_stats(target_id, current_cfg, day)
         if lock_s > 0:
             days_with_data += 1
             total_lock += lock_s
-            total_unlock += _calc_unlock_count(target_id, start, end)
-            day_type = _daily_status(lock_s, total_sec)
+            total_unlock += unlock
             if day_type == 'success':
                 success_count += 1
-        else:
-            day_type = 'empty'
         day_list.append({'day': str(day.day), 'type': day_type})
 
     if days_with_data == 0:
         return ok({
             'type': 'month',
-            'custom_sleep_time': _fmt_sleep_window(cfg),
-            'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+            'custom_sleep_time': _fmt_sleep_window(current_cfg),
+            'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
             'month_total_hour': '0小时',
             'avg_day_hour': '0小时',
             'success_month_day': 0,
@@ -570,23 +577,22 @@ def monthly_report(user_id):
     prev_unlock = 0
     prev_with_data = 0
     for day in prev_days:
-        start, end = _night_window(cfg, day)
-        lock_s = _calc_lock_seconds(target_id, start, end)
+        lock_s, unlock, _ = _night_stats(target_id, current_cfg, day)
         if lock_s > 0:
-            prev_unlock += _calc_unlock_count(target_id, start, end)
+            prev_unlock += unlock
             prev_with_data += 1
 
     # 挽回时长
-    baseline, total_nights = _calc_baseline(target_id, cfg)
+    baseline, total_nights = _calc_baseline(target_id, current_cfg)
     show_save = False
     month_save_hour = ''
     if baseline is not None:
         total_save = 0
         has_save = False
         for day in days:
-            start, end = _night_window(cfg, day)
-            if _calc_lock_seconds(target_id, start, end) > 0:
-                saved, show = _calc_saved_time(target_id, cfg, baseline, day)
+            lock_s, _, _ = _night_stats(target_id, current_cfg, day)
+            if lock_s > 0:
+                saved, show = _calc_saved_time(target_id, current_cfg, baseline, day)
                 if show and saved >= 0:
                     total_save += saved
                     has_save = True
@@ -594,12 +600,12 @@ def monthly_report(user_id):
             show_save = True
             month_save_hour = _fmt_duration(total_save)
 
-    comment = _month_comment(avg_unlock, success_count, days_with_data, cfg.sleep_is_unhealthy)
+    comment = _month_comment(avg_unlock, success_count, days_with_data, current_cfg.sleep_is_unhealthy)
 
     return ok({
         'type': 'month',
-        'custom_sleep_time': _fmt_sleep_window(cfg),
-        'sleep_is_unhealthy': cfg.sleep_is_unhealthy,
+        'custom_sleep_time': _fmt_sleep_window(current_cfg),
+        'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
         'month_total_hour': _fmt_duration(total_lock),
         'avg_day_hour': _fmt_duration(avg_day_lock),
         'success_month_day': success_count,

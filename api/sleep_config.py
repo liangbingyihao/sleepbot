@@ -1,9 +1,9 @@
 import pytz
-from datetime import time
+from datetime import time, datetime
 
 from flask import Blueprint, request, abort
 
-from models import db, SleepConfig
+from models import db, SleepConfig, SleepConfigHistory
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -49,6 +49,15 @@ def set_sleep_config(user_id):
 
     config = SleepConfig.query.filter_by(user_id=user_id).first()
     if config:
+        history = SleepConfigHistory(
+            user_id=user_id,
+            sleep_start_time=config.sleep_start_time,
+            sleep_end_time=config.sleep_end_time,
+            timezone=config.timezone,
+            sleep_is_unhealthy=config.sleep_is_unhealthy,
+            effective_from=datetime.utcnow(),
+        )
+        db.session.add(history)
         config.sleep_start_time = sleep_start
         config.sleep_end_time = sleep_end
         config.timezone = timezone

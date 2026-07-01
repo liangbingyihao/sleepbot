@@ -499,6 +499,10 @@
   var params = new URLSearchParams(window.location.search);
   var API_BASE = params.get('api_base') || window.location.origin;
   var sessionId = params.get('session_id');
+  if (window.AppJSBridge === true) {
+    var giftBar = document.querySelector('.gift-bar');
+    if (giftBar) giftBar.style.display = 'none';
+  }
   var loading = document.getElementById('loading');
   var expired = document.getElementById('expired');
   var formArea = document.getElementById('formArea');

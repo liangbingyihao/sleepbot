@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, abort, current_app, send_from_directory, g
 from werkzeug.utils import secure_filename
 
-from models import db, UploadSession, UserOssFile, SystemMaterial
+from models import db, UploadSession, UserOssFile, SystemMaterial, Users
 from api.utils import require_user_id
 from api.errors import ok
 from api.assets_oss import get_bucket, presign_url, upload_to_oss, delete_from_oss
@@ -51,9 +51,8 @@ def session_info(session_id):
     if not session:
         abort(404, 'session 不存在')
 
-    from models import UserProfile
-    profile = UserProfile.query.filter_by(user_id=session.user_id).first()
-    creator_name = profile.nickname if profile and profile.nickname else session.user_id
+    user = Users.query.filter_by(id=int(session.user_id)).first()
+    creator_name = user.display_name if user and user.display_name else session.user_id
 
     return ok({
         'valid': not session.is_expired(),
@@ -139,10 +138,7 @@ def upload_file(session_id):
         ext = secure_filename(f.filename).rsplit('.', 1)[-1] if '.' in f.filename else ''
         object_key = f'materials/{user_id}/{uuid.uuid4()}.{ext}'
 
-        from models import UserProfile
-        profile = UserProfile.query.filter_by(user_id=user_id).first()
-        region = profile.region if profile else 'cn'
-        bucket = get_bucket(region)
+        bucket = get_bucket('cn')
 
         _logger.info('upload_file oss start, bucket=%s, key=%s, session_id=%s',
                      bucket, object_key, session_id)
