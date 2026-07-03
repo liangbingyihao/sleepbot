@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta
 import pytz
 from flask import Blueprint, request, abort
 
-from models import db, Friendship, SleepConfig, Users, UserStatus
+from models import db, Friendship, SleepConfig, Users, UserStatus, UserOssFile
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -285,3 +285,45 @@ def get_friends(user_id):
     result.sort(key=lambda f: (f['sleep_config'] is None, f['friendship_id']))
 
     return ok({'friends': result, 'next_poll_at': next_poll_at})
+
+
+@supervision_bp.route('/poll', methods=['GET'])
+@require_user_id
+def poll_updates(user_id):
+    since_str = request.args.get('since', '')
+    if since_str:
+        try:
+            since = datetime.strptime(since_str, '%Y-%m-%dT%H:%M:%S')
+        except ValueError:
+            abort(400, 'since 格式错误，应为 ISO 格式如 2026-07-01T12:00:00')
+        has_friend_changes = Friendship.query.filter(
+            db.or_(
+                Friendship.from_user_id == user_id,
+                Friendship.to_user_id == user_id,
+            ),
+            Friendship.updated_at > since,
+        ).first() is not None
+        counts = db.session.query(
+            UserOssFile.file_type,
+            db.func.count(UserOssFile.id),
+        ).filter(
+            UserOssFile.user_id == user_id,
+            UserOssFile.created_at > since,
+            UserOssFile.file_type.in_(['text', 'audio']),
+        ).group_by(UserOssFile.file_type).all()
+    else:
+        has_friend_changes = True
+        counts = db.session.query(
+            UserOssFile.file_type,
+            db.func.count(UserOssFile.id),
+        ).filter(
+            UserOssFile.user_id == user_id,
+            UserOssFile.file_type.in_(['text', 'audio']),
+        ).group_by(UserOssFile.file_type).all()
+
+    new_materials = {ft: c for ft, c in counts}
+    return ok({
+        'has_friend_changes': has_friend_changes,
+        'new_text': new_materials.get('text', 0),
+        'new_audio': new_materials.get('audio', 0),
+    })

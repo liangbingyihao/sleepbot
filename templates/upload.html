@@ -88,6 +88,9 @@
   input[type=text]:focus, textarea:focus {
     box-shadow: 0 0 0 2px #6c7bff;
   }
+  input[type=text].exceed, textarea.exceed {
+    box-shadow: 0 0 0 2px #e53935;
+  }
   textarea { resize: none; min-height: 180px; }
   .type-selector { display: flex; gap: 16px; margin: 24px 0; }
   .type-btn {
@@ -164,6 +167,14 @@
   }
   .submit-btn:hover { opacity: 0.92; }
   .submit-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 1; }
+  .char-counter {
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+  }
+  .char-counter.exceed { color: #e53935; }
   .msg { margin-top: 16px; padding: 12px; border-radius: 16px; font-size: 14px; display: none; }
   .msg.success { display: block; background: #e6f7e6; color: #2e7d32; }
   .msg.error { display: block; background: #fdecea; color: #c62828; }
@@ -311,7 +322,8 @@
     <form id="uploadForm" enctype="multipart/form-data">
       <div class="form-group">
         <label data-i18n="labelName">你的昵称</label>
-        <input type="text" id="friendName" data-i18n="placeholderName" placeholder="请输入你的名字" required>
+        <input type="text" id="friendName" data-i18n="placeholderName" placeholder="请输入你的名字" required maxlength="60">
+        <span class="char-counter" id="nameCounter">0/20</span>
       </div>
 
       <div class="type-selector">
@@ -329,7 +341,7 @@
 
       <div id="fileSection">
         <label class="file-label" id="fileLabel" for="fileInput">
-          <span id="fileText">点击选择图片</span>
+          <span id="fileText" data-i18n="filePickImage">点击选择图片</span>
         </label>
         <input type="file" class="file-input" id="fileInput" accept="image/*">
       </div>
@@ -349,7 +361,8 @@
       <div id="textSection" style="display:none;">
         <div class="form-group">
           <label data-i18n="labelText">鼓励的话</label>
-          <textarea id="textContent" data-i18n="placeholderText" placeholder="写一段话鼓励你的好友吧..."></textarea>
+          <textarea id="textContent" data-i18n="placeholderText" placeholder="写一段话鼓励你的好友吧..." maxlength="60"></textarea>
+          <span class="char-counter" id="textCounter">0/30</span>
         </div>
       </div>
 
@@ -423,6 +436,8 @@
         errorServer: '服务器返回异常{status}，请稍后重试',
         errorNetwork: '网络错误，请重试',
         errorSubmit: '提交出错：{msg}',
+        errorNameTooLong: '昵称过长，中文最多10字、英文最多20字符',
+        errorTextTooLong: '文字过长，中文最多15字、英文最多30字符',
       },
       en: {
         title: 'Encourage Your Friend',
@@ -465,6 +480,8 @@
         errorServer: 'Server error{status}. Please try again.',
         errorNetwork: 'Network error. Please try again.',
         errorSubmit: 'Submission error: {msg}',
+        errorNameTooLong: 'Name too long (max 10 CJK or 20 ASCII)',
+        errorTextTooLong: 'Message too long (max 15 CJK or 30 ASCII characters)',
       },
     };
     var lang = _locale === 'zh' ? strings.zh : strings.en;
@@ -557,6 +574,12 @@
   var isApple = /iPhone|iPad|iPod|Mac OS|Safari/.test(navigator.userAgent) && !/Chrome|Android/.test(navigator.userAgent);
   var MAX_RECORD_SECONDS = 60;
   applyI18n();
+  var displayNameFromUrl = params.get('display_name');
+  if (displayNameFromUrl) {
+    document.getElementById('friendName').value = decodeURIComponent(displayNameFromUrl);
+    updateCounter(document.getElementById('friendName'), document.getElementById('nameCounter'), 20);
+  }
+  recHint.textContent = _t('hintDefault', {max: MAX_RECORD_SECONDS});
   var mediaRecorder = null;
   var audioChunks = [];
   var recordedBlob = null;
@@ -570,6 +593,32 @@
   function stopTimer() {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
   }
+
+  function _displayWidth(s) {
+    var w = 0;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      w += (c >= 0x4e00 && c <= 0x9fff) ? 2 : 1;
+    }
+    return w;
+  }
+
+  function updateCounter(input, counterEl, maxW) {
+    var w = _displayWidth(input.value);
+    var exceed = w > maxW;
+    counterEl.textContent = w + '/' + maxW;
+    counterEl.className = exceed ? 'char-counter exceed' : 'char-counter';
+    input.className = exceed ? (input.className.replace(/\bexceed\b/g, '').trim() + ' exceed') : input.className.replace(/\bexceed\b/g, '').trim();
+  }
+
+  var friendNameInput = document.getElementById('friendName');
+  var textContentEl = document.getElementById('textContent');
+  friendNameInput.addEventListener('input', function() {
+    updateCounter(friendNameInput, document.getElementById('nameCounter'), 20);
+  });
+  textContentEl.addEventListener('input', function() {
+    updateCounter(textContentEl, document.getElementById('textCounter'), 30);
+  });
 
   function formatTime(s) {
     var m = String(Math.floor(s / 60)).padStart(2, '0');
@@ -708,13 +757,25 @@
 
     try {
       var fd = new FormData();
-      fd.append('friend_name', document.getElementById('friendName').value.trim());
+      var friendName = document.getElementById('friendName').value.trim();
+      fd.append('friend_name', friendName);
       fd.append('type', getCurrentType());
+
+      if (_displayWidth(friendName) > 20) {
+        showError(_t('errorNameTooLong'));
+        submitBtn.disabled = false;
+        return;
+      }
 
       if (getCurrentType() === 'text') {
         var content = document.getElementById('textContent').value.trim();
         if (!content) {
           showError(_t('errorTextEmpty'));
+          submitBtn.disabled = false;
+          return;
+        }
+        if (_displayWidth(content) > 30) {
+          showError(_t('errorTextTooLong'));
           submitBtn.disabled = false;
           return;
         }
@@ -740,12 +801,13 @@
 
       var xhr2 = new XMLHttpRequest();
       xhr2.open('POST', API_BASE + '/api/sleep/assets/friend/upload/' + sessionId);
+      xhr2.setRequestHeader('X-Language', _locale === 'zh' ? 'zh-CN' : 'en');
       xhr2.onload = function() {
         try {
           var resp = JSON.parse(xhr2.responseText);
           if (xhr2.status === 200) {
             msg.className = 'msg success';
-            msg.textContent = resp.data ? resp.data.msg : _t('successMsg');
+            msg.textContent = _t('successMsg');
             msg.style.display = 'block';
             form.reset();
             fileLabel.classList.remove('has-file');

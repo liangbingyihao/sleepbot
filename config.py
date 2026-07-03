@@ -26,7 +26,7 @@ class Config:
     OSS_ENDPOINT_SG = os.getenv('OSS_ENDPOINT_SG', '')
     OSS_BUCKET_CN = os.getenv('OSS_BUCKET_CN', 'cn-bucket')
     OSS_BUCKET_SG = os.getenv('OSS_BUCKET_SG', 'sg-bucket')
-    ASSET_SESSION_TTL = int(os.getenv('ASSET_SESSION_TTL', '86400'))
+    ASSET_SESSION_TTL = int(os.getenv('ASSET_SESSION_TTL', '3600'))
 
     UPLOAD_BASE_URL = os.getenv('UPLOAD_BASE_URL', 'http://localhost:5050')
-    MATERIAL_LIMIT = int(os.getenv('MATERIAL_LIMIT', '5'))
+    MATERIAL_LIMIT = int(os.getenv('MATERIAL_LIMIT', '30'))

@@ -558,19 +558,35 @@ POST /assets/session
 
 **请求头**: `X-User-Id` 必填。
 
+**说明**: 每次调用会清理该用户已过期的 session。若存在未过期的活跃 session，则仅延长其有效期（id 不变，已分享的链接继续有效）；否则创建新 session。有效期在服务端配置（默认 1 小时）。
+
 **响应示例**:
 ```json
 {
   "code": "OK",
   "data": {
     "session_id": "a1b2c3d4-...",
-    "url": "http://localhost:5050/api/sleep/assets/upload/a1b2c3d4-...",
+    "url": "http://localhost:5050/upload.html?session_id=a1b2c3d4-...",
     "expires_at": "2026-05-26 10:00:00"
   }
 }
 ```
 
-`url` 为采集页面链接，可分享给好友。有效期在服务端配置（默认 24 小时）。
+`expires_at` 为 UTC 时间，客户端可用于判断 session 是否过期，无需额外请求。`url` 为采集页面链接，可分享给好友。有效期在服务端配置（默认 1 小时）。
+
+**客户端缓存策略建议**:
+
+```
+页面加载时 → POST /assets/session → 缓存 {url, expires_at}
+用户点击"新增" → 对比 now 和 expires_at
+  ├─ 未过期 → 直接用缓存 url（零延迟）
+  └─ 已过期 → 重新 POST /assets/session → 用新 url
+
+// 可选：过期前 1 分钟自动续期，避免点击时恰好过期
+setTimeout(() => {
+  POST /assets/session → 更新缓存
+}, (expires_at - now - 60) * 1000);
+```
 
 ### 5.2 查询 Session 状态
 
@@ -587,7 +603,8 @@ GET /assets/friend/session/<session_id>
   "data": {
     "valid": true,
     "expired": false,
-    "expires_at": "2026-05-26 10:00:00"
+    "expires_at": "2026-05-26 10:00:00",
+    "creator_name": "张三"
   }
 }
 ```

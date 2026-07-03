@@ -20,6 +20,41 @@ _ALLOWED_MIME = {
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
+_UPLOAD_MESSAGES = {
+    'session_expired':   {'zh-CN': '上传链接已过期，请让好友重新生成', 'en': 'Upload link expired, please ask your friend to regenerate'},
+    'missing_name':      {'zh-CN': '请输入你的昵称', 'en': 'Please enter your name'},
+    'name_too_long':     {'zh-CN': '昵称过长', 'en': 'Name too long'},
+    'invalid_type':      {'zh-CN': 'type 必须为 image、audio 或 text', 'en': 'type must be image, audio or text'},
+    'library_full':      {'zh-CN': '该好友的素材库已满，无法继续上传', 'en': 'Friend library full, cannot upload more'},
+    'empty_text':        {'zh-CN': '请输入文字内容', 'en': 'Please enter text content'},
+    'text_too_long':     {'zh-CN': '文字内容过长', 'en': 'Text too long'},
+    'missing_file':      {'zh-CN': '请选择文件', 'en': 'Please select a file'},
+    'unsupported_format':{'zh-CN': '不支持的文件格式: {mime}', 'en': 'Unsupported file format: {mime}'},
+    'file_too_large':    {'zh-CN': '文件大小不能超过 5MB', 'en': 'File size cannot exceed 5MB'},
+    'oss_upload_failed':  {'zh-CN': '文件上传到云存储失败', 'en': 'File upload to cloud storage failed'},
+}
+
+
+def _msg(key, **kwargs):
+    locale = getattr(g, 'locale', 'zh-CN')
+    t = _UPLOAD_MESSAGES.get(key, {})
+    s = t.get(locale, t.get('zh-CN', key))
+    if kwargs:
+        s = s.format(**kwargs)
+    return s
+
+
+def _display_width(s):
+    w = 0
+    for c in s:
+        w += 2 if '\u4e00' <= c <= '\u9fff' else 1
+    return w
+
+
+def _check_length(text, key, max_width):
+    if _display_width(text) > max_width:
+        abort(400, _msg(key))
+
 
 @assets_bp.route('/assets/session', methods=['POST'])
 @require_user_id
@@ -29,12 +64,27 @@ def create_session(user_id):
     expires_at = datetime.utcnow() + timedelta(seconds=ttl)
     base_url = current_app.config['UPLOAD_BASE_URL']
 
-    session = UploadSession(
-        id=session_id,
-        user_id=user_id,
-        expires_at=expires_at,
-    )
-    db.session.add(session)
+    UploadSession.query.filter(
+        UploadSession.user_id == user_id,
+        UploadSession.expires_at < datetime.utcnow(),
+    ).delete()
+
+    existing = UploadSession.query.filter_by(user_id=user_id) \
+        .order_by(UploadSession.created_at.desc()).first()
+
+    if existing and not existing.is_expired():
+        existing.expires_at = expires_at
+        session_id = existing.id
+    elif existing:
+        existing.id = session_id
+        existing.expires_at = expires_at
+    else:
+        session = UploadSession(
+            id=session_id,
+            user_id=user_id,
+            expires_at=expires_at,
+        )
+        db.session.add(session)
     db.session.commit()
 
     return ok({
@@ -75,19 +125,20 @@ def upload_file(session_id):
     session = UploadSession.query.get(session_id)
     if not session or session.is_expired():
         _logger.warning('upload_file session expired or not found, session_id=%s', session_id)
-        abort(400, '上传链接已过期，请让好友重新生成')
+        abort(400, _msg('session_expired'))
 
     user_id = session.user_id
 
     friend_name = (request.form.get('friend_name') or '').strip()
     if not friend_name:
         _logger.warning('upload_file missing friend_name, session_id=%s', session_id)
-        abort(400, '请输入你的昵称')
+        abort(400, _msg('missing_name'))
+    _check_length(friend_name, 'name_too_long', 20)
 
     file_type = request.form.get('type')
     if file_type not in ('image', 'audio', 'text'):
         _logger.warning('upload_file invalid type=%s, session_id=%s', file_type, session_id)
-        abort(400, 'type 必须为 image、audio 或 text')
+        abort(400, _msg('invalid_type'))
 
     limit = current_app.config.get('MATERIAL_LIMIT', 30)
     count = UserOssFile.query.filter_by(user_id=user_id).filter(
@@ -95,7 +146,7 @@ def upload_file(session_id):
     ).count()
     if count >= limit:
         _logger.warning('upload_file material limit reached, user_id=%s, limit=%s', user_id, limit)
-        abort(400, '该好友的素材库已满，无法继续上传')
+        abort(400, _msg('library_full'))
 
     record = UserOssFile(
         user_id=user_id,
@@ -109,7 +160,8 @@ def upload_file(session_id):
         text = (request.form.get('content') or '').strip()
         if not text:
             _logger.warning('upload_file empty text, session_id=%s', session_id)
-            abort(400, '请输入文字内容')
+            abort(400, _msg('empty_text'))
+        _check_length(text, 'text_too_long', 30)
         record.content_text = text
         record.mime_type = 'text/plain'
         _logger.info('upload_file text saved, session_id=%s', session_id)
@@ -117,7 +169,7 @@ def upload_file(session_id):
         f = request.files.get('file')
         if not f or not f.filename:
             _logger.warning('upload_file no file, session_id=%s', session_id)
-            abort(400, '请选择文件')
+            abort(400, _msg('missing_file'))
 
         mime = f.content_type or 'application/octet-stream'
         allowed = _ALLOWED_MIME.get(file_type, set())
@@ -126,14 +178,14 @@ def upload_file(session_id):
 
         if mime not in allowed:
             _logger.warning('upload_file unsupported mime=%s, session_id=%s', mime, session_id)
-            abort(400, f'不支持的文件格式: {mime}')
+            abort(400, _msg('unsupported_format', mime=mime))
 
         f.seek(0, 2)
         size = f.tell()
         f.seek(0)
         if size > MAX_FILE_SIZE:
             _logger.warning('upload_file file too large, size=%s, session_id=%s', size, session_id)
-            abort(400, '文件大小不能超过 5MB')
+            abort(400, _msg('file_too_large'))
 
         ext = secure_filename(f.filename).rsplit('.', 1)[-1] if '.' in f.filename else ''
         object_key = f'materials/{user_id}/{uuid.uuid4()}.{ext}'
@@ -147,7 +199,7 @@ def upload_file(session_id):
         except Exception as e:
             _logger.error('upload_file oss upload failed, bucket=%s, key=%s, error=%s',
                           bucket, object_key, str(e), exc_info=True)
-            abort(500, '文件上传到云存储失败')
+            abort(500, _msg('oss_upload_failed'))
 
         _logger.info('upload_file oss success, bucket=%s, key=%s, session_id=%s',
                      bucket, object_key, session_id)

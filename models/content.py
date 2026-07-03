@@ -22,7 +22,7 @@ class UploadSession(db.Model):
         }
 
     def is_expired(self):
-        return self.status != 'active' or datetime.utcnow() > self.expires_at
+        return datetime.utcnow() > self.expires_at
 
 
 class UserOssFile(db.Model):
