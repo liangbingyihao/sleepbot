@@ -59,6 +59,9 @@ def _check_length(text, key, max_width):
 @assets_bp.route('/assets/session', methods=['POST'])
 @require_user_id
 def create_session(user_id):
+    data = request.get_json(silent=True) or {}
+    invite_code = (data.get('invite_code') or '').strip() or None
+
     session_id = str(uuid.uuid4())
     ttl = current_app.config['ASSET_SESSION_TTL']
     expires_at = datetime.utcnow() + timedelta(seconds=ttl)
@@ -74,14 +77,18 @@ def create_session(user_id):
 
     if existing and not existing.is_expired():
         existing.expires_at = expires_at
+        if invite_code:
+            existing.invite_code = invite_code
         session_id = existing.id
     elif existing:
         existing.id = session_id
         existing.expires_at = expires_at
+        existing.invite_code = invite_code
     else:
         session = UploadSession(
             id=session_id,
             user_id=user_id,
+            invite_code=invite_code,
             expires_at=expires_at,
         )
         db.session.add(session)
@@ -89,7 +96,7 @@ def create_session(user_id):
 
     return ok({
         'session_id': session_id,
-        'url': f'{base_url}/upload.html?session_id={session_id}',
+        'url': f'{base_url}/upload?session_id={session_id}',
         'expires_at': expires_at.strftime('%Y-%m-%d %H:%M:%S'),
     })
 
@@ -109,6 +116,7 @@ def session_info(session_id):
         'expired': session.is_expired(),
         'expires_at': session.expires_at.strftime('%Y-%m-%d %H:%M:%S'),
         'creator_name': creator_name,
+        'invite_code': session.invite_code,
     })
 
 

@@ -560,6 +560,17 @@ POST /assets/session
 
 **说明**: 每次调用会清理该用户已过期的 session。若存在未过期的活跃 session，则仅延长其有效期（id 不变，已分享的链接继续有效）；否则创建新 session。有效期在服务端配置（默认 1 小时）。
 
+**请求体** (JSON, 可选):
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| invite_code | string | 否 | 邀请码，用于好友识别 |
+
+**请求体示例**:
+```json
+{ "invite_code": "ABC123" }
+```
+
 **响应示例**:
 ```json
 {
@@ -604,7 +615,8 @@ GET /assets/friend/session/<session_id>
     "valid": true,
     "expired": false,
     "expires_at": "2026-05-26 10:00:00",
-    "creator_name": "张三"
+    "creator_name": "张三",
+    "invite_code": "ABC123"
   }
 }
 ```
@@ -798,7 +810,8 @@ GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
     "show_save_time": true,
     "save_hour": "7小时40分",
     "save_seconds": 27600,
-    "save_tip": ""
+    "save_tip": "今晚锁屏7小时21分，比之前少玩7小时40分，表现优秀！",
+    "day_type_label": "很棒"
   }
 }
 ```
@@ -813,8 +826,9 @@ GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
 | `unlock_count` | 时段内解锁次数 |
 | `day_type` | success / warning / danger / empty |
 | `show_save_time` | 累计 ≥3 晚有效记录 且 当日挽回 ≥0 时为 true |
-| `save_hour` / `save_seconds` | 挽回熬夜时长 |
-| `save_tip` | 空数据 / 不足3晚 / 挽回为负时的文案提示 |
+| `save_hour` / `save_seconds` | 比之前少玩手机时长 |
+| `save_tip` | 睡眠总结文案，始终有值，包含锁屏/少玩/解锁等数据 |
+| `day_type_label` | 日类型标签：很棒 / 还行 / 加油 / 无数据 |
 
 **空态**（当日无数据）: `day_type: "empty"`, `lock_seconds: 0`。
 

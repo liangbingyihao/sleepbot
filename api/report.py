@@ -22,13 +22,45 @@ report_bp = Blueprint('report', __name__)
 _BASELINE_MIN_NIGHTS = 3
 
 _I18N = {
-    'save_tip_negative': {
-        'zh': '今晚解锁次数略有增加，明天继续稳住作息',
-        'en': 'Unlock count was a bit higher tonight. Keep it up tomorrow!',
+    'summary_empty': {
+        'zh': '今晚暂无锁屏数据',
+        'en': 'No lock screen data tonight',
     },
-    'save_tip_insufficient': {
-        'zh': '积累3晚睡眠数据后，为你生成自律提升分析',
-        'en': 'Accumulate 3 nights of sleep data to generate your self-discipline analysis',
+    'summary_insufficient': {
+        'zh': '再积累几晚数据，即可解锁自律分析',
+        'en': 'A few more nights to unlock your analysis',
+    },
+    'summary_success': {
+        'zh': '比之前少玩{save}，表现优秀！',
+        'en': 'Down {save} from before. Awesome!',
+    },
+    'summary_warning_save': {
+        'zh': '比之前少玩{save}，再稳一点会更好',
+        'en': 'Down {save} from before. Stay steady!',
+    },
+    'summary_danger_save': {
+        'zh': '比之前少玩{save}，坚持住！',
+        'en': 'Down {save} from before. Hang in there!',
+    },
+    'summary_no_save': {
+        'zh': '今晚表现不如之前，明天加油',
+        'en': 'Not as good as before. Try again!',
+    },
+    'label_empty': {
+        'zh': '无数据',
+        'en': 'No data',
+    },
+    'label_success': {
+        'zh': '很棒',
+        'en': 'Awesome',
+    },
+    'label_warning': {
+        'zh': '还行',
+        'en': 'Okay',
+    },
+    'label_danger': {
+        'zh': '加油',
+        'en': 'Keep going',
     },
     'encourage_weekly': {
         'zh': '下周继续和搭档一起坚守作息，收获更好的睡眠吧',
@@ -354,7 +386,7 @@ def daily_report(user_id):
 
     lock_s, unlock, day_type = _night_stats(target_id, current_cfg, d)
 
-    # 无数据 → 空态
+    # 空态
     if lock_s <= 0:
         return ok({
             'type': 'day',
@@ -367,7 +399,8 @@ def daily_report(user_id):
             'show_save_time': False,
             'save_hour': '',
             'save_seconds': 0,
-            'save_tip': '',
+            'save_tip': _t('summary_empty'),
+            'day_type_label': _t('label_empty'),
         })
 
     # 挽回时长：基线 ≥3晚 且 当日挽回 ≥0 才展示
@@ -375,7 +408,6 @@ def daily_report(user_id):
     show_save = False
     save_time = ''
     save_seconds = 0
-    save_tip = ''
 
     if baseline is not None:
         saved, show_save = _calc_saved_time(target_id, current_cfg, baseline, d)
@@ -383,10 +415,17 @@ def daily_report(user_id):
             save_seconds = saved
             save_time = _fmt_duration(saved)
 
-    if baseline is not None and not show_save:
-        save_tip = _t('save_tip_negative')
-    elif baseline is None and lock_s > 0:
-        save_tip = _t('save_tip_insufficient')
+    if baseline is None:
+        save_tip = _t('summary_insufficient')
+    elif show_save:
+        if day_type == 'success':
+            save_tip = _t('summary_success', save=save_time)
+        elif day_type == 'warning':
+            save_tip = _t('summary_warning_save', save=save_time)
+        else:
+            save_tip = _t('summary_danger_save', save=save_time)
+    else:
+        save_tip = _t('summary_no_save')
 
     return ok({
         'type': 'day',
@@ -400,6 +439,7 @@ def daily_report(user_id):
         'save_hour': save_time,
         'save_seconds': save_seconds,
         'save_tip': save_tip,
+        'day_type_label': _t(f'label_{day_type}'),
     })
 
 

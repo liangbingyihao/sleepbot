@@ -8,6 +8,7 @@ class UploadSession(db.Model):
 
     id = db.Column(db.String(36), primary_key=True)
     user_id = db.Column(db.String(64), nullable=False, index=True)
+    invite_code = db.Column(db.String(64), nullable=True, default=None)
     status = db.Column(db.String(16), nullable=False, default='active')
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -16,6 +17,7 @@ class UploadSession(db.Model):
         return {
             'id': self.id,
             'user_id': self.user_id,
+            'invite_code': self.invite_code,
             'status': self.status,
             'expires_at': self.expires_at.strftime('%Y-%m-%d %H:%M:%S'),
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
