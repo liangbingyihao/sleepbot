@@ -98,12 +98,16 @@ _I18N = {
         'zh': '0分钟',
         'en': '0m',
     },
+    'fmt_zero_hour': {
+        'zh': '0小时',
+        'en': '0h',
+    },
 }
 
 
 def _t(key, **kwargs):
     locale = g.locale if hasattr(g, 'locale') and g.locale else 'zh'
-    lang = 'zh' if locale.startswith('zh') else 'en'
+    lang = 'zh' if locale == 'zh-CN' else 'en'
     entry = _I18N.get(key, {})
     text = entry.get(lang, key)
     if kwargs:
@@ -392,7 +396,8 @@ def daily_report(user_id):
             'type': 'day',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
-            'lock_hour': '0分钟',
+            'timezone': current_cfg.timezone,
+            'lock_hour': _t('fmt_zero'),
             'lock_seconds': 0,
             'unlock_count': 0,
             'day_type': 'empty',
@@ -431,6 +436,7 @@ def daily_report(user_id):
         'type': 'day',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
+        'timezone': current_cfg.timezone,
         'lock_hour': _fmt_duration(lock_s),
         'lock_seconds': lock_s,
         'unlock_count': unlock,
@@ -485,8 +491,9 @@ def weekly_report(user_id):
             'type': 'week',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
+            'timezone': current_cfg.timezone,
             'total_lock_minute': 0,
-            'total_lock_hour': '0小时',
+            'total_lock_hour': _t('fmt_zero_hour'),
             'success_day': 0,
             'avg_unlock': 0,
             'show_rate': False,
@@ -536,6 +543,7 @@ def weekly_report(user_id):
         'type': 'week',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
+        'timezone': current_cfg.timezone,
         'total_lock_minute': _fmt_minutes(total_lock),
         'total_lock_hour': _fmt_duration(total_lock),
         'success_day': success_count,
@@ -597,6 +605,7 @@ def monthly_report(user_id):
             'type': 'month',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
+            'timezone': current_cfg.timezone,
             'month_total_hour': '0小时',
             'avg_day_hour': '0小时',
             'success_month_day': 0,
@@ -646,6 +655,7 @@ def monthly_report(user_id):
         'type': 'month',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
+        'timezone': current_cfg.timezone,
         'month_total_hour': _fmt_duration(total_lock),
         'avg_day_hour': _fmt_duration(avg_day_lock),
         'success_month_day': success_count,

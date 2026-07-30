@@ -1,9 +1,9 @@
 from datetime import datetime, time, timedelta
 
 import pytz
-from flask import Blueprint, request, abort
+from flask import Blueprint, request, abort, g
 
-from models import db, Friendship, SleepConfig, Users, UserStatus, UserOssFile
+from models import db, Friendship, SleepConfig, Users, UserStatus, UserOssFile, SystemMaterial
 from api.utils import require_user_id
 from api.errors import ok
 
@@ -183,19 +183,6 @@ def _resolve_window(cfg):
     return in_window, local_date
 
 
-def _next_window_utc(cfg):
-    """返回最近一个睡眠窗口的 UTC 起止时间
-
-    若当前落在窗口内 → 当前窗口；否则 → 即将到来的下个窗口
-    返回 (start_str, end_str, is_active, start_dt, end_dt) 或 None
-    """
-    in_window, local_date = _resolve_window(cfg)
-    if local_date is None:
-        return None
-    ws, we = _local_night_to_utc(cfg, local_date)
-    return ws.strftime('%Y-%m-%d %H:%M:%S'), we.strftime('%Y-%m-%d %H:%M:%S'), in_window, ws, we
-
-
 def _sleep_status(cfg, user_id):
     """计算当前 sleep_status
 
@@ -245,9 +232,6 @@ def get_friends(user_id):
     ).all()
 
     result = []
-    poll_times = []
-    now_utc = datetime.utcnow()
-    fallback = now_utc + timedelta(seconds=60)
 
     for f in friendships:
         if f.from_user_id == user_id:
@@ -257,7 +241,6 @@ def get_friends(user_id):
 
         sleep_config = SleepConfig.query.filter_by(user_id=friend_id).first()
         user = Users.query.filter_by(id=friend_id).first()
-        window = _next_window_utc(sleep_config)
 
         result.append({
             'friendship_id': f.id,
@@ -266,62 +249,71 @@ def get_friends(user_id):
             'friend_avatar': user.avatar if user else '',
             'apply_message': f.apply_message if f.from_user_id != user_id else '',
             'created_at': f.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'updated_at': f.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
             'sleep_config': sleep_config.to_dict() if sleep_config else None,
             'sleep_status': _sleep_status(sleep_config, friend_id),
         })
 
-        if window:
-            _, _, active, ws_dt, we_dt = window
-            if active:
-                # 在窗口内：窗口结束时或 60 秒后，取较早者
-                poll_times.append(min(we_dt, fallback))
-            elif ws_dt > now_utc:
-                # 不在窗口内：窗口开始时刷新
-                poll_times.append(ws_dt)
+    result.sort(key=lambda f: (f['sleep_config'] is None, -f['friendship_id']))
 
-    next_poll = min(poll_times) if poll_times else fallback
-    next_poll_at = next_poll.strftime('%Y-%m-%d %H:%M:%S')
-
-    result.sort(key=lambda f: (f['sleep_config'] is None, f['friendship_id']))
-
-    return ok({'friends': result, 'next_poll_at': next_poll_at})
+    return ok({'friends': result})
 
 
 @supervision_bp.route('/poll', methods=['GET'])
 @require_user_id
 def poll_updates(user_id):
-    since_str = request.args.get('since', '')
-    if since_str:
-        try:
-            since = datetime.strptime(since_str, '%Y-%m-%dT%H:%M:%S')
-        except ValueError:
-            abort(400, 'since 格式错误，应为 ISO 格式如 2026-07-01T12:00:00')
-        has_friend_changes = Friendship.query.filter(
-            db.or_(
-                Friendship.from_user_id == user_id,
-                Friendship.to_user_id == user_id,
-            ),
-            Friendship.updated_at > since,
-        ).first() is not None
-        counts = db.session.query(
-            UserOssFile.file_type,
-            db.func.count(UserOssFile.id),
-        ).filter(
-            UserOssFile.user_id == user_id,
-            UserOssFile.created_at > since,
-            UserOssFile.file_type.in_(['text', 'audio']),
-        ).group_by(UserOssFile.file_type).all()
-    else:
-        has_friend_changes = True
-        counts = db.session.query(
-            UserOssFile.file_type,
-            db.func.count(UserOssFile.id),
-        ).filter(
-            UserOssFile.user_id == user_id,
-            UserOssFile.file_type.in_(['text', 'audio']),
-        ).group_by(UserOssFile.file_type).all()
+    friend_id_str = (request.args.get('friendship_id') or '').strip()
+    material_id_str = (request.args.get('material_id') or '').strip()
 
+    if not friend_id_str and not material_id_str:
+        locale = getattr(g, 'locale', 'zh-CN')
+        sys_counts = db.session.query(
+            SystemMaterial.file_type,
+            db.func.count(SystemMaterial.id),
+        ).filter(
+            SystemMaterial.locale == locale,
+            SystemMaterial.is_active.is_(True),
+            SystemMaterial.file_type.in_(['text', 'audio']),
+        ).group_by(SystemMaterial.file_type).all()
+        sys_materials = {ft: c for ft, c in sys_counts}
+        return ok({
+            'has_friend_changes': False,
+            'new_text': 0,
+            'new_audio': 0,
+            'system_text_count': sys_materials.get('text', 0),
+            'system_audio_count': sys_materials.get('audio', 0),
+        })
+
+    try:
+        friend_id = int(friend_id_str) if friend_id_str else 0
+    except ValueError:
+        abort(400, 'friendship_id 必须为整数')
+
+    try:
+        material_id = int(material_id_str) if material_id_str else 0
+    except ValueError:
+        abort(400, 'material_id 必须为整数')
+
+    has_friend_changes = Friendship.query.filter(
+        db.or_(
+            Friendship.from_user_id == user_id,
+            Friendship.to_user_id == user_id,
+        ),
+        Friendship.status == 'accepted',
+        Friendship.id > friend_id,
+    ).first() is not None
+
+    counts = db.session.query(
+        UserOssFile.file_type,
+        db.func.count(UserOssFile.id),
+    ).filter(
+        UserOssFile.user_id == user_id,
+        UserOssFile.id > material_id,
+        UserOssFile.status == 'pending',
+        UserOssFile.file_type.in_(['text', 'audio']),
+    ).group_by(UserOssFile.file_type).all()
     new_materials = {ft: c for ft, c in counts}
+
     return ok({
         'has_friend_changes': has_friend_changes,
         'new_text': new_materials.get('text', 0),

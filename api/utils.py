@@ -3,8 +3,7 @@ from functools import wraps
 from flask import request, abort, g
 
 _LOCALE_ALIAS = {
-    'zh': 'zh-CN', 'zh_cn': 'zh-CN', 'zho': 'zh-CN',
-    'zh_tw': 'zh-TW', 'cht': 'zh-TW',
+    'zh': 'zh-CN', 'zh_cn': 'zh-CN', 'zh_hans': 'zh-CN', 'zh_hant': 'zh-CN', 'zho': 'zh-CN',
     'en': 'en', 'en_us': 'en',
 }
 
@@ -13,7 +12,8 @@ def _normalize_locale(locale):
     if not locale:
         return locale
     cleaned = locale.strip().lower().replace('-', '_')
-    return _LOCALE_ALIAS.get(cleaned, locale)
+    alias = _LOCALE_ALIAS.get(cleaned)
+    return 'zh-CN' if alias == 'zh-CN' else 'en'
 
 
 def require_user_id(f):

@@ -22,10 +22,11 @@
   - [4.5 修改好友备注](#4-5-修改好友备注)
   - [4.6 删除好友关系](#4-6-删除好友关系)
    - [4.7 获取好友列表](#4-7-获取好友列表)
-   - [4.8 解锁题库](#4-8-解锁题库)
-     - [4.8.1 获取配置](#4-8-1-获取配置)
-     - [4.8.2 更新配置](#4-8-2-更新配置)
-     - [4.8.3 随机抽题](#4-8-3-随机抽题)
+   - [4.8 轮询变更](#4-8-轮询变更)
+   - [4.9 解锁题库](#4-9-解锁题库)
+     - [4.9.1 获取配置](#4-9-1-获取配置)
+     - [4.9.2 更新配置](#4-9-2-更新配置)
+     - [4.9.3 随机抽题](#4-9-3-随机抽题)
 - [5. 早睡鼓励素材](#5-早睡鼓励素材)
   - [5.1 生成上传 Session](#5-1-生成上传-session)
   - [5.2 查询 Session 状态](#5-2-查询-session-状态)
@@ -431,14 +432,14 @@ GET /friends
         "friend_avatar": "https://...",
         "apply_message": "",
         "created_at": "2026-05-25 10:00:00",
+        "updated_at": "2026-05-25 10:00:00",
         "sleep_config": {
           "sleep_start_time": "23:00",
           "sleep_end_time": "08:00"
         },
         "sleep_status": "locked"
       }
-    ],
-    "next_poll_at": "2026-06-24 15:01:00"
+    ]
   }
 }
 ```
@@ -454,17 +455,97 @@ GET /friends
 
 `sleep_status` 仅在好友处于睡眠时段时查询 `user_status` 表，否则直接返回 `awake`，零额外查询。
 
-`next_poll_at` 为客户端下一次应轮询的 UTC 时间，算法：取所有好友窗口结束时间（在窗口内）和窗口开始时间（不在窗口内）的最早值，最小间隔 60 秒保底。客户端只需：
+**排序规则**：已配置睡眠时间的好友在前，未配置的在后；同级内 `friendship_id` 降序（新关系在前）。
+
+### 4.8 轮询变更
 
 ```
-setTimeout(() => GET /friends, next_poll_at - now)
+GET /poll?friendship_id=123&material_id=456
 ```
 
-### 4.8 解锁题库
+轻量信号接口，基于自增 ID 返回好友和素材的新增变更。不返回具体数据，客户端收到变更信号后自行调用 `GET /friends` 和 `GET /assets/materials` 获取完整数据。
+
+**查询参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| friendship_id | int | 否 | 客户端已读的最后一条 `Friendship.id`，返回 `id > friendship_id` 的 accepted 好友 |
+| material_id | int | 否 | 客户端已读的最后一条 `UserOssFile.id`，返回 `id > material_id` 的 pending 素材 |
+
+> 两个参数都不传 = 首次安装，返回系统素材计数。
+
+**常规轮询（至少传一个参数）**:
+
+```json
+{
+  "code": "OK",
+  "data": {
+    "has_friend_changes": true,
+    "new_text": 2,
+    "new_audio": 1
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `has_friend_changes` | `Friendship.id > friendship_id AND status = 'accepted'` 的好友是否存在 |
+| `new_text` | `UserOssFile.id > material_id AND status = 'pending'` 的 text 素材数量 |
+| `new_audio` | `UserOssFile.id > material_id AND status = 'pending'` 的 audio 素材数量 |
+
+> 注：poll 不检测好友信息更新（如改名），仅检测新增。
+
+**首次安装（两个参数都不传）**:
+
+```json
+{
+  "code": "OK",
+  "data": {
+    "has_friend_changes": false,
+    "new_text": 0,
+    "new_audio": 0,
+    "system_text_count": 5,
+    "system_audio_count": 3
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `system_text_count` | 按 `X-Language` 匹配的活跃 text 系统素材数量 |
+| `system_audio_count` | 按 `X-Language` 匹配的活跃 audio 系统素材数量 |
+
+**客户端约定**:
+
+客户端本地持久化两个已读 ID，配合 FCM 推送使用：
+
+```
+存储:
+  last_friend_view_id   = 0
+  last_material_view_id = 0
+
+首次安装:
+  └─ GET /poll
+     → 初始化 last_friend_view_id = 0, last_material_view_id = 0
+
+收到 FCM 推送 / 前台定时器 / 冷启动:
+  └─ GET /poll?friendship_id={last_friend_view_id}&material_id={last_material_view_id}
+     → has_friend_changes → GET /friends，friendship_id > last_friend_view_id 的好友标红
+        → 用户打开好友页后 → 更新 last_friend_view_id = max(friendship_id)
+     → new_text/new_audio > 0 → 下次进入素材页 GET /assets/materials
+        → 用户打开素材页后 → 更新 last_material_view_id = max(id)
+```
+
+- FCM 推送为轻量信号（如 `{ type: "friend_change" }`），不承载数据，客户端收到后调 `/poll` 拉取增量
+- 首次安装无参数，不标红任何好友——"新"是相对于上次查看的概念
+- 前台定时器（建议 60s）作为 FCM 推送的兜底，防止推送丢失或延迟
+- 好友改名更新不在 poll 检测范围内，用户打开 app 自然看到最新名称
+
+### 4.9 解锁题库
 
 题库以 JSON 格式存储在 `app_config` 表中，`config_type = 'quiz_questions'`，每条记录对应一种语言。题目字段包括 `type`（single_choice / multiple_choice）、`title`、`options[]`（含 `id`、`text`）、`answers`（正确答案 ID 数组）、`explanation`。
 
-#### 4.8.1 获取配置
+#### 4.9.1 获取配置
 
 ```
 GET /configs/<config_type>?locale=zh-CN
@@ -504,7 +585,7 @@ GET /configs/<config_type>?locale=zh-CN
 }
 ```
 
-#### 4.8.2 更新配置
+#### 4.9.2 更新配置
 
 ```
 PUT /configs/<config_type>?locale=zh-CN
@@ -520,7 +601,7 @@ PUT /configs/<config_type>?locale=zh-CN
 
 **响应**: 同获取接口。
 
-#### 4.8.3 随机抽题
+#### 4.9.3 随机抽题
 
 ```
 GET /quiz/random?locale=zh-CN
@@ -803,6 +884,7 @@ GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
     "type": "day",
     "custom_sleep_time": "23:00 – 07:00",
     "sleep_is_unhealthy": false,
+    "timezone": "Asia/Shanghai",
     "lock_hour": "7小时21分",
     "lock_seconds": 26460,
     "unlock_count": 1,
@@ -810,7 +892,7 @@ GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
     "show_save_time": true,
     "save_hour": "7小时40分",
     "save_seconds": 27600,
-    "save_tip": "今晚锁屏7小时21分，比之前少玩7小时40分，表现优秀！",
+    "save_tip": "比之前少玩7小时40分，表现优秀！",
     "day_type_label": "很棒"
   }
 }
@@ -822,6 +904,7 @@ GET /report/daily?date=YYYY-MM-DD&friend_id=xxx
 |------|------|
 | `custom_sleep_time` | 用户自定义时段字符串，如 `"23:00 – 07:00"` |
 | `sleep_is_unhealthy` | 自定义时长 <6h 时为 true |
+| `timezone` | 时区，如 `"Asia/Shanghai"`，查看好友报告时显示好友时区 |
 | `lock_hour` / `lock_seconds` | 自定义时段内有效锁屏时长 |
 | `unlock_count` | 时段内解锁次数 |
 | `day_type` | success / warning / danger / empty |
@@ -849,6 +932,7 @@ GET /report/weekly?date=YYYY-MM-DD&friend_id=xxx
     "type": "week",
     "custom_sleep_time": "23:00 – 07:00",
     "sleep_is_unhealthy": false,
+    "timezone": "Asia/Shanghai",
     "total_lock_minute": 4320,
     "total_lock_hour": "72小时",
     "success_day": 5,
@@ -896,6 +980,7 @@ GET /report/monthly?month=YYYY-MM&friend_id=xxx
     "type": "month",
     "custom_sleep_time": "23:00 – 07:00",
     "sleep_is_unhealthy": false,
+    "timezone": "Asia/Shanghai",
     "month_total_hour": "210小时",
     "avg_day_hour": "7小时",
     "success_month_day": 18,

@@ -109,7 +109,7 @@ def session_info(session_id):
         abort(404, 'session 不存在')
 
     user = Users.query.filter_by(id=int(session.user_id)).first()
-    creator_name = user.display_name if user and user.display_name else session.user_id
+    creator_name = user.display_name if user and user.display_name else ''
 
     return ok({
         'valid': not session.is_expired(),
@@ -234,24 +234,22 @@ def get_materials(user_id):
     all_files = UserOssFile.query.filter_by(user_id=user_id).order_by(UserOssFile.created_at.desc()).all()
 
     if not all_files:
-        for ft in ('text', 'audio'):
-            default = next((m for m in sys_items if m.file_type == ft), None)
-            if default:
-                m = UserOssFile(
-                    user_id=user_id,
-                    session_id='_system_',
-                    friend_name='',
-                    file_type=default.file_type,
-                    source_system_material_id=default.id,
-                    status='approved',
-                )
-                db.session.add(m)
+        all_sys = SystemMaterial.query.filter_by(is_active=True).all()
+        for m in all_sys:
+            if m.file_type not in ('text', 'audio'):
+                continue
+            db.session.add(UserOssFile(
+                user_id=user_id,
+                session_id='_system_',
+                friend_name='',
+                file_type=m.file_type,
+                source_system_material_id=m.id,
+                status='approved',
+            ))
         db.session.commit()
         all_files = UserOssFile.query.filter_by(user_id=user_id).order_by(UserOssFile.created_at.desc()).all()
 
     adopted_map = {}
-    materials = []
-
     materials = []
 
     for m in sys_items:

@@ -20,6 +20,7 @@
     border-radius: 24px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     padding: 32px 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     max-width: 480px;
     width: 100%;
     text-align: center;
@@ -33,7 +34,7 @@
     text-align: center;
     font-style: normal;
     text-transform: none;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   p.desc {
     font-family: SF Arabic, SF Arabic;
@@ -41,10 +42,11 @@
     font-size: 14px;
     color: #333333;
     line-height: 20px;
-    text-align: center;
+    text-align: left;
     font-style: normal;
     text-transform: none;
     margin-bottom: 30px;
+    padding: 0 8px;
   }
   .expired-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
   .expired-text { color: #999; font-size: 15px; }
@@ -90,7 +92,7 @@
   input[type=text].exceed, textarea.exceed {
     box-shadow: 0 0 0 2px #e53935;
   }
-  textarea { resize: none; min-height: 180px; }
+  textarea { resize: none; height: 30vh; }
   .type-selector { display: flex; gap: 16px; margin: 24px 0; }
   .type-btn {
     flex: 1;
@@ -121,7 +123,6 @@
   .type-btn:hover { opacity: 0.9; }
   .type-btn.active {
     border: 2px solid #6c7bff;
-    background: #fff;
     font-family: SF Arabic, SF Arabic;
     font-weight: 400;
     font-size: 14px;
@@ -185,6 +186,11 @@
     text-align: center;
     margin-bottom: 8px;
     background: #f8f9ff;
+    height: 30vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   .recorder-box.recording { border-color: #e53935; background: #fff5f5; }
   .recorder-box.has-recording { border-color: #6c7bff; background: #eef1ff; }
@@ -210,6 +216,15 @@
   .rec-preview audio { width: 100%; height: 40px; border-radius: 8px; }
   .rec-hint { font-size: 13px; color: #999; margin-top: 8px; }
   .rec-hint.error { color: #c62828; }
+  .rec-actions { display: none; margin-top: 12px; gap: 12px; justify-content: center; }
+  .rec-actions.show { display: flex; }
+  .rec-action-btn {
+    flex: 1; max-width: 160px; padding: 10px 0; border: none; border-radius: 24px;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .rec-action-retake { background: #f0f0f0; color: #666; }
+  .rec-action-retake:hover { background: #e0e0e0; }
+  .rec-action-send { background: linear-gradient(136deg, #5F75FA 0%, #B972FF 100%); color: #fff; }
   .notice {
     background: transparent;
     border-radius: 16px;
@@ -218,7 +233,7 @@
     text-align: left;
     display: flex;
     gap: 10px;
-    align-items: flex-start;
+    align-items: center;
   }
   .notice-icon { font-size: 18px; line-height: 1.4; flex-shrink: 0; color: #6c7bff; }
   .notice-text {
@@ -297,7 +312,7 @@
 </head>
 <body>
 <div class="heading-area">
-  <h1>给 <span id="creatorName">好友</span> 的睡前鼓励</h1>
+  <h1>给 <span id="creatorName">好友</span> 的睡前鼓励~</h1>
   <p class="desc" data-i18n="pageDesc">你的好友正在努力早睡，送上一份鼓励吧！</p>
 </div>
 <div class="card" id="app">
@@ -323,11 +338,11 @@
         <button type="button" class="type-btn" data-type="image" data-i18n="tabImage">图片</button>
         <!-- 录音 增加麦克风图标 -->
         <button type="button" class="type-btn active" data-type="audio">
-          <img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/record%402x.png" style="height:12px;"> <span data-i18n="tabAudio">录音</span>
+          <img id="tabAudioIcon" src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/record_active.png" style="height:12px;"> <span data-i18n="tabAudio">录音</span>
         </button>
         <!-- 文字 增加文字图标 -->
         <button type="button" class="type-btn" data-type="text">
-          <img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/text%402x.png" style="height:12px;"> <span data-i18n="tabText">文字</span>
+          <img id="tabTextIcon" src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/text.png" style="height:12px;"> <span data-i18n="tabText">文字</span>
         </button>
       </div>
 
@@ -338,32 +353,37 @@
         <input type="file" class="file-input" id="fileInput" accept="image/*">
       </div>
 
-      <div id="recorderSection" style="display:none;">
-        <div class="recorder-box" id="recorderBox">
-          <div class="rec-timer" id="recTimer">00:00</div>
-          <div>
-            <button type="button" class="rec-btn rec-btn-start" id="recStartBtn"><img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/icon-mic.webp" style="height:12px;"><span data-i18n="startRecord">开始录音</span></button>
-            <button type="button" class="rec-btn rec-btn-stop" id="recStopBtn" style="display:none;">&#x23F9;<span data-i18n="stopRecord">停止</span></button>
+      <div class="form-group">
+        <label data-i18n="labelText">鼓励的话</label>
+        <div id="recorderSection">
+          <div class="recorder-box" id="recorderBox">
+            <div class="rec-timer" id="recTimer">00:00</div>
+            <div>
+              <button type="button" class="rec-btn rec-btn-start" id="recStartBtn"><img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/icon-mic.webp" style="height:12px;"><span data-i18n="startRecord">开始录音</span></button>
+              <button type="button" class="rec-btn rec-btn-stop" id="recStopBtn" style="display:none;">&#x23F9;<span data-i18n="stopRecord">停止</span></button>
+            </div>
+            <div class="rec-preview" id="recPreview" style="display:none;"></div>
+            <div class="rec-actions" id="recActions">
+              <button type="button" class="rec-action-btn rec-action-retake" id="recRetakeBtn" data-i18n="reRecord">重新录制</button>
+              <button type="button" class="rec-action-btn rec-action-send" id="recSendBtn" data-i18n="sendRecord">发送录音</button>
+            </div>
+            <div class="rec-hint" id="recHint">点击"开始录音"录制你的鼓励</div>
           </div>
-          <div class="rec-preview" id="recPreview" style="display:none;"></div>
-          <div class="rec-hint" id="recHint">点击"开始录音"录制你的鼓励</div>
         </div>
-      </div>
-
-      <div id="textSection" style="display:none;">
-        <div class="form-group">
-          <label data-i18n="labelText">鼓励的话</label>
+        <div id="textSection" style="display:none;">
           <textarea id="textContent" data-i18n="placeholderText" placeholder="写一段话鼓励你的好友吧..." maxlength="60"></textarea>
           <span class="char-counter" id="textCounter">0/30</span>
         </div>
       </div>
 
-      <div class="notice">
+      <div class="notice" id="noticeBlock">
         <div class="notice-icon"><img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/info%402x.png" style="height:12px;"></div>
         <div class="notice-text">
-          <strong data-i18n="noticeTitle">内容用途说明</strong><br>
+          <strong data-i18n="noticeTitle" style="cursor:pointer;">内容用途说明</strong><span class="notice-arrow" style="cursor:pointer;color:#666;">▼</span><br>
+          <div id="noticeBodyBlock" style="display:none;">
           <span data-i18n="noticeBody">你提交的内容将显示在好友的手机锁屏上，每次解锁都能看到你的鼓励。</span><br>
           <span class="notice-privacy" data-i18n="noticePrivacy">仅你和对方可见，其他任何人无法查看。</span>
+          </div>
         </div>
       </div>
 
@@ -383,13 +403,15 @@
 
 <script>
 (function() {
-  var _locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
+  var rawLang = navigator.language;
+  var _locale = (rawLang === 'zh-CN' || rawLang === 'zh') ? 'zh' : 'en';
   var _t = (function() {
     var strings = {
       zh: {
         title: '给好友的鼓励',
-        pageTitle: '给 <span id="creatorName" style="color:#6574FB;">{name}</span> 的睡前鼓励',
-        pageDesc: '你的好友正在努力早睡，送上一份鼓励吧！',
+        friendFallback: '好友',
+        pageTitle: '给 <span id="creatorName" style="color:#6574FB;">{name}</span> 的晚安留言~',
+        pageDesc: '你的好友正在调整作息，送上一份小小的鼓励吧！',
         loading: '检查链接状态...',
         expiredHeading: '链接已过期',
         expiredText: '该素材收集链接已失效，请联系你的好友重新生成。',
@@ -405,8 +427,9 @@
         startRecord: '开始录音',
         stopRecord: '停止',
         reRecord: '重新录制',
-        hintDefault: '点击"开始录音"录制你的鼓励（最长 {max} 秒）',
-        hintRecording: '录音中...（最长 {max} 秒）',
+        sendRecord: '发送录音',
+        hintDefault: '轻触录制语音留言（最长60秒）',
+        hintRecording: '录音中...（最长60秒）',
         hintDone: '已录制 {time}，可播放试听',
         hintNoSupport: '您的浏览器不支持录音功能',
         hintGetPermission: '正在获取麦克风权限...',
@@ -423,6 +446,7 @@
         errorRecordEmpty: '请先录制一段录音',
         errorFileEmpty: '请选择一个文件',
         successMsg: '上传成功！',
+        successCount: '已成功发送{n}条',
         errorUpload: '上传失败，请重试',
         errorServer: '服务器返回异常{status}，请稍后重试',
         errorNetwork: '网络错误，请重试',
@@ -432,14 +456,15 @@
       },
       en: {
         title: 'Encourage Your Friend',
-        pageTitle: 'Goodnight encouragement for <span id="creatorName" style="color:#6574FB;">{name}</span>',
-        pageDesc: 'Your friend is working on going to bed early. Send them some encouragement!',
+        friendFallback: 'Sleep Buddy',
+        pageTitle: 'Goodnight Message for&nbsp;<span id="creatorName" style="color:#6574FB;">{name}</span>',
+        pageDesc: 'Your friend is aiming for an early bedtime. Send them a little encouragement!',
         loading: 'Checking link status...',
         expiredHeading: 'Link Expired',
         expiredText: 'This collection link is no longer valid. Please ask your friend to generate a new one.',
         expiredNoSession: 'Missing session_id parameter',
         expiredNetwork: 'Unable to connect to server. Please try again later.',
-        labelName: 'Your Name',
+        labelName: 'Your Display Name',
         placeholderName: 'Enter your name',
         tabImage: 'Image',
         tabAudio: 'Audio',
@@ -449,8 +474,9 @@
         startRecord: 'Start Recording',
         stopRecord: 'Stop',
         reRecord: 'Re-record',
-        hintDefault: 'Click "Start Recording" to record (max {max}s)',
-        hintRecording: 'Recording... (max {max}s)',
+        sendRecord: 'Send',
+        hintDefault: 'Record voice message (Max 60s)',
+        hintRecording: 'Recording... (Max 60s)',
         hintDone: 'Recorded {time} — tap to preview',
         hintNoSupport: 'Your browser does not support audio recording',
         hintGetPermission: 'Requesting microphone access...',
@@ -467,6 +493,7 @@
         errorRecordEmpty: 'Please record a message first',
         errorFileEmpty: 'Please select a file',
         successMsg: 'Upload successful!',
+        successCount: 'Sent {n} item(s)',
         errorUpload: 'Upload failed. Please try again.',
         errorServer: 'Server error{status}. Please try again.',
         errorNetwork: 'Network error. Please try again.',
@@ -496,7 +523,7 @@
         el.textContent = _t(key);
       }
     });
-    var name = document.getElementById('creatorName').textContent;
+    var name = _t('friendFallback');
     document.querySelector('h1').innerHTML = _t('pageTitle', {name: name});
   }
 
@@ -531,6 +558,10 @@
       formArea.style.display = 'block';
       if (resp.data.creator_name) {
         _setHeading(resp.data.creator_name);
+        if (window.AppJSBridge === true) {
+          document.getElementById('friendName').value = resp.data.creator_name;
+          updateCounter(document.getElementById('friendName'), document.getElementById('nameCounter'), 20);
+        }
       }
       document.querySelector('.type-btn[data-type="audio"]').click();
     } else {
@@ -557,6 +588,12 @@
 
   var recStartBtn = document.getElementById('recStartBtn');
   var recStopBtn = document.getElementById('recStopBtn');
+  var tabAudioIcon = document.getElementById('tabAudioIcon');
+  var tabTextIcon = document.getElementById('tabTextIcon');
+  var ICON_AUDIO = 'https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/record.png';
+  var ICON_AUDIO_ACTIVE = 'https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/record_active.png';
+  var ICON_TEXT = 'https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/text.png';
+  var ICON_TEXT_ACTIVE = 'https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/text_active.png';
   var recTimer = document.getElementById('recTimer');
   var recPreview = document.getElementById('recPreview');
   var recHint = document.getElementById('recHint');
@@ -565,12 +602,7 @@
   var isApple = /iPhone|iPad|iPod|Mac OS|Safari/.test(navigator.userAgent) && !/Chrome|Android/.test(navigator.userAgent);
   var MAX_RECORD_SECONDS = 60;
   applyI18n();
-  var displayNameFromUrl = params.get('display_name');
-  if (displayNameFromUrl) {
-    document.getElementById('friendName').value = decodeURIComponent(displayNameFromUrl);
-    updateCounter(document.getElementById('friendName'), document.getElementById('nameCounter'), 20);
-  }
-  recHint.textContent = _t('hintDefault', {max: MAX_RECORD_SECONDS});
+  recHint.textContent = _t('hintDefault');
   var mediaRecorder = null;
   var audioChunks = [];
   var recordedBlob = null;
@@ -602,6 +634,16 @@
     input.className = exceed ? (input.className.replace(/\bexceed\b/g, '').trim() + ' exceed') : input.className.replace(/\bexceed\b/g, '').trim();
   }
 
+  var noticeTitle = document.querySelector('.notice-text strong');
+  if (noticeTitle) {
+    noticeTitle.addEventListener('click', function() {
+      var b = document.getElementById('noticeBodyBlock');
+      var arrow = document.querySelector('.notice-arrow');
+      b.style.display = b.style.display === 'none' ? 'block' : 'none';
+      if (arrow) arrow.textContent = b.style.display === 'none' ? '\u25BC' : '\u25B2';
+    });
+  }
+
   var friendNameInput = document.getElementById('friendName');
   var textContentEl = document.getElementById('textContent');
   friendNameInput.addEventListener('input', function() {
@@ -622,7 +664,8 @@
     audioChunks = [];
     recPreview.style.display = 'none';
     recPreview.innerHTML = '';
-    recHint.textContent = _t('hintDefault', {max: MAX_RECORD_SECONDS});
+    document.getElementById('recActions').classList.remove('show');
+    recHint.textContent = _t('hintDefault');
     recHint.className = 'rec-hint';
     recTimer.textContent = '00:00';
     recTimer.className = 'rec-timer';
@@ -633,6 +676,10 @@
     btn.addEventListener('click', function() {
       typeBtns.forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
+      tabAudioIcon.src = ICON_AUDIO;
+      tabTextIcon.src = ICON_TEXT;
+      if (btn.dataset.type === 'audio') tabAudioIcon.src = ICON_AUDIO_ACTIVE;
+      else if (btn.dataset.type === 'text') tabTextIcon.src = ICON_TEXT_ACTIVE;
       var t = btn.dataset.type;
       if (t === 'text') {
         fileSection.style.display = 'none';
@@ -651,6 +698,14 @@
         fileLabel.classList.remove('has-file');
       }
     });
+  });
+
+  document.getElementById('recRetakeBtn').addEventListener('click', function() {
+    resetRecorderUI();
+  });
+
+  document.getElementById('recSendBtn').addEventListener('click', function() {
+    form.dispatchEvent(new Event('submit'));
   });
 
   fileInput.addEventListener('change', function() {
@@ -681,7 +736,7 @@
       recStopBtn.style.display = 'inline-flex';
       recPreview.style.display = 'none';
       recPreview.innerHTML = '';
-      recHint.textContent = _t('hintRecording', {max: MAX_RECORD_SECONDS});
+      recHint.textContent = _t('hintRecording');
       recHint.className = 'rec-hint';
 
       stopTimer();
@@ -722,6 +777,7 @@
         recHint.textContent = _t('hintDone', {time: formatTime(seconds)});
         recHint.className = 'rec-hint';
         recPreview.style.display = 'block';
+        document.getElementById('recActions').classList.add('show');
         var audio = document.createElement('audio');
         audio.controls = true;
         audio.src = URL.createObjectURL(recordedBlob);
@@ -747,77 +803,98 @@
     submitBtn.disabled = true;
 
     try {
-      var fd = new FormData();
       var friendName = document.getElementById('friendName').value.trim();
-      fd.append('friend_name', friendName);
-      fd.append('type', getCurrentType());
-
       if (_displayWidth(friendName) > 20) {
         showError(_t('errorNameTooLong'));
         submitBtn.disabled = false;
         return;
       }
 
-      if (getCurrentType() === 'text') {
-        var content = document.getElementById('textContent').value.trim();
-        if (!content) {
-          showError(_t('errorTextEmpty'));
-          submitBtn.disabled = false;
-          return;
-        }
-        if (_displayWidth(content) > 30) {
-          showError(_t('errorTextTooLong'));
-          submitBtn.disabled = false;
-          return;
-        }
-        fd.append('content', content);
-      } else if (getCurrentType() === 'audio') {
-        if (!recordedBlob) {
-          showError(_t('errorRecordEmpty'));
-          submitBtn.disabled = false;
-          return;
-        }
-        var ext = recordedBlob.type.includes('mp4') ? 'm4a' : 'webm';
-        var audioFile = new File([recordedBlob], 'recording.' + ext, { type: recordedBlob.type });
-        fd.append('file', audioFile);
-      } else {
-        var file = fileInput.files[0];
-        if (!file) {
-          showError(_t('errorFileEmpty'));
-          submitBtn.disabled = false;
-          return;
-        }
-        fd.append('file', file);
+      var textContent = document.getElementById('textContent').value.trim();
+      if (textContent && _displayWidth(textContent) > 30) {
+        showError(_t('errorTextTooLong'));
+        submitBtn.disabled = false;
+        return;
       }
 
-      var xhr2 = new XMLHttpRequest();
-      xhr2.open('POST', API_BASE + '/api/sleep/assets/friend/upload/' + sessionId);
-      xhr2.setRequestHeader('X-Language', _locale === 'zh' ? 'zh-CN' : 'en');
-      xhr2.onload = function() {
-        try {
-          var resp = JSON.parse(xhr2.responseText);
-          if (xhr2.status === 200) {
+      var hasAudio = !!recordedBlob;
+      var hasText = !!textContent;
+
+      if (!hasAudio && !hasText) {
+        showError(_t('errorTextEmpty'));
+        submitBtn.disabled = false;
+        return;
+      }
+
+      var tasks = [];
+      if (hasAudio) {
+        var ext = recordedBlob.type.includes('mp4') ? 'm4a' : 'webm';
+        var audioFile = new File([recordedBlob], 'recording.' + ext, { type: recordedBlob.type });
+        var fd = new FormData();
+        fd.append('friend_name', friendName);
+        fd.append('type', 'audio');
+        fd.append('file', audioFile);
+        tasks.push(fd);
+      }
+      if (hasText) {
+        var fd = new FormData();
+        fd.append('friend_name', friendName);
+        fd.append('type', 'text');
+        fd.append('content', textContent);
+        tasks.push(fd);
+      }
+
+      var done = 0;
+      var failed = false;
+      var successCount = 0;
+      function sendNext() {
+        if (done >= tasks.length) {
+          if (!failed) {
             msg.className = 'msg success';
             msg.textContent = _t('successMsg');
             msg.style.display = 'block';
+            var savedName = document.getElementById('friendName').value;
             form.reset();
+            document.getElementById('friendName').value = savedName;
             fileLabel.classList.remove('has-file');
             fileText.textContent = _t('filePickImage');
-            document.querySelector('.type-btn[data-type="audio"]').click();
-          } else {
-            showError(resp.msg || _t('errorUpload'));
+            resetRecorderUI();
           }
-        } catch(e) {
-          console.error('parse error, status:', xhr2.status, 'body:', xhr2.responseText.slice(0, 200));
-          showError(_t('errorServer', {status: xhr2.status ? ' (' + xhr2.status + ')' : ''}));
+          submitBtn.disabled = false;
+          return;
         }
-        submitBtn.disabled = false;
-      };
-      xhr2.onerror = function() {
-        showError(_t('errorNetwork'));
-        submitBtn.disabled = false;
-      };
-      xhr2.send(fd);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', API_BASE + '/api/sleep/assets/friend/upload/' + sessionId);
+        xhr.setRequestHeader('X-Language', _locale === 'zh' ? 'zh-CN' : 'en');
+        xhr.onload = function() {
+          if (xhr.status !== 200) {
+            failed = true;
+            try {
+              var resp = JSON.parse(xhr.responseText);
+              showError(resp.msg || _t('errorUpload'));
+            } catch(e) {
+              showError(_t('errorServer', {status: xhr.status ? ' (' + xhr.status + ')' : ''}));
+            }
+          } else {
+            successCount++;
+            if (tasks.length > 1) {
+              msg.className = 'msg success';
+              msg.textContent = _t('successCount', {n: successCount});
+              msg.style.display = 'block';
+            }
+          }
+          done++;
+          sendNext();
+        };
+        xhr.onerror = function() {
+          failed = true;
+          showError(_t('errorNetwork'));
+          done++;
+          sendNext();
+        };
+        xhr.send(tasks[done]);
+      }
+      sendNext();
     } catch(e) {
       showError(_t('errorSubmit', {msg: e.message}));
       submitBtn.disabled = false;
