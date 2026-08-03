@@ -51,7 +51,7 @@
   .expired-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
   .expired-text { color: #999; font-size: 15px; }
   .loading { color: #999; font-size: 15px; padding: 40px 0; }
-  .form-group { margin-bottom: 24px; text-align: left; }
+  .form-group { margin-bottom: 24px; text-align: left; position: relative; }
   label {
     display: block;
     font-family: SF Arabic, SF Arabic;
@@ -67,6 +67,7 @@
   input[type=text], textarea {
     width: 100%;
     padding: 20px;
+    padding-bottom: 32px;
     border: none;
     background-color: #f8f9ff;
     border-radius: 16px;
@@ -92,7 +93,8 @@
   input[type=text].exceed, textarea.exceed {
     box-shadow: 0 0 0 2px #e53935;
   }
-  textarea { resize: none; height: 30vh; }
+  textarea { resize: none; height: 200px; overflow-y: auto; }
+  #recorderSection, #textSection { height: 200px; }
   .type-selector { display: flex; gap: 16px; margin: 24px 0; }
   .type-btn {
     flex: 1;
@@ -168,11 +170,15 @@
   .submit-btn:hover { opacity: 0.92; }
   .submit-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 1; }
   .char-counter {
-    display: block;
-    text-align: right;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
     font-size: 12px;
     color: #999;
-    margin-top: 4px;
+    background: rgba(248,249,255,0.85);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
   }
   .char-counter.exceed { color: #e53935; }
   .msg { margin-top: 16px; padding: 12px; border-radius: 16px; font-size: 14px; display: none; }
@@ -186,7 +192,7 @@
     text-align: center;
     margin-bottom: 8px;
     background: #f8f9ff;
-    height: 30vh;
+    height: 200px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -216,15 +222,6 @@
   .rec-preview audio { width: 100%; height: 40px; border-radius: 8px; }
   .rec-hint { font-size: 13px; color: #999; margin-top: 8px; }
   .rec-hint.error { color: #c62828; }
-  .rec-actions { display: none; margin-top: 12px; gap: 12px; justify-content: center; }
-  .rec-actions.show { display: flex; }
-  .rec-action-btn {
-    flex: 1; max-width: 160px; padding: 10px 0; border: none; border-radius: 24px;
-    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  }
-  .rec-action-retake { background: #f0f0f0; color: #666; }
-  .rec-action-retake:hover { background: #e0e0e0; }
-  .rec-action-send { background: linear-gradient(136deg, #5F75FA 0%, #B972FF 100%); color: #fff; }
   .notice {
     background: transparent;
     border-radius: 16px;
@@ -329,8 +326,10 @@
     <form id="uploadForm" enctype="multipart/form-data">
       <div class="form-group">
         <label data-i18n="labelName">你的昵称</label>
-        <input type="text" id="friendName" data-i18n="placeholderName" placeholder="请输入你的名字" required maxlength="60">
-        <span class="char-counter" id="nameCounter">0/20</span>
+        <div style="position: relative;">
+          <input type="text" id="friendName" data-i18n="placeholderName" placeholder="请输入你的名字" required maxlength="60">
+          <span class="char-counter" id="nameCounter">0/20</span>
+        </div>
       </div>
 
       <div class="type-selector">
@@ -362,12 +361,8 @@
               <button type="button" class="rec-btn rec-btn-start" id="recStartBtn"><img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/icon-mic.webp" style="height:12px;"><span data-i18n="startRecord">开始录音</span></button>
               <button type="button" class="rec-btn rec-btn-stop" id="recStopBtn" style="display:none;">&#x23F9;<span data-i18n="stopRecord">停止</span></button>
             </div>
-            <div class="rec-preview" id="recPreview" style="display:none;"></div>
-            <div class="rec-actions" id="recActions">
-              <button type="button" class="rec-action-btn rec-action-retake" id="recRetakeBtn" data-i18n="reRecord">重新录制</button>
-              <button type="button" class="rec-action-btn rec-action-send" id="recSendBtn" data-i18n="sendRecord">发送录音</button>
-            </div>
-            <div class="rec-hint" id="recHint">点击"开始录音"录制你的鼓励</div>
+<div class="rec-preview" id="recPreview" style="display:none;"></div>
+          <div class="rec-hint" id="recHint">点击"开始录音"录制你的鼓励</div>
           </div>
         </div>
         <div id="textSection" style="display:none;">
@@ -376,18 +371,18 @@
         </div>
       </div>
 
+      <button type="submit" class="submit-btn" id="submitBtn" data-i18n="submitBtn">发送鼓励</button>
+
       <div class="notice" id="noticeBlock">
         <div class="notice-icon"><img src="https://graceword.oss-cn-hongkong.aliyuncs.com/sleep/static/info%402x.png" style="height:12px;"></div>
         <div class="notice-text">
-          <strong data-i18n="noticeTitle" style="cursor:pointer;">内容用途说明</strong><span class="notice-arrow" style="cursor:pointer;color:#666;">▼</span><br>
-          <div id="noticeBodyBlock" style="display:none;">
+          <strong data-i18n="noticeTitle">内容用途说明</strong><br>
+          <div id="noticeBodyBlock">
           <span data-i18n="noticeBody">你提交的内容将显示在好友的手机锁屏上，每次解锁都能看到你的鼓励。</span><br>
           <span class="notice-privacy" data-i18n="noticePrivacy">仅你和对方可见，其他任何人无法查看。</span>
           </div>
         </div>
       </div>
-
-      <button type="submit" class="submit-btn" id="submitBtn" data-i18n="submitBtn">发送鼓励</button>
     </form>
 
     <div class="msg" id="msg"></div>
@@ -427,7 +422,6 @@
         startRecord: '开始录音',
         stopRecord: '停止',
         reRecord: '重新录制',
-        sendRecord: '发送录音',
         hintDefault: '轻触录制语音留言（最长60秒）',
         hintRecording: '录音中...（最长60秒）',
         hintDone: '已录制 {time}，可播放试听',
@@ -474,7 +468,6 @@
         startRecord: 'Start Recording',
         stopRecord: 'Stop',
         reRecord: 'Re-record',
-        sendRecord: 'Send',
         hintDefault: 'Record voice message (Max 60s)',
         hintRecording: 'Recording... (Max 60s)',
         hintDone: 'Recorded {time} — tap to preview',
@@ -664,7 +657,6 @@
     audioChunks = [];
     recPreview.style.display = 'none';
     recPreview.innerHTML = '';
-    document.getElementById('recActions').classList.remove('show');
     recHint.textContent = _t('hintDefault');
     recHint.className = 'rec-hint';
     recTimer.textContent = '00:00';
@@ -698,14 +690,6 @@
         fileLabel.classList.remove('has-file');
       }
     });
-  });
-
-  document.getElementById('recRetakeBtn').addEventListener('click', function() {
-    resetRecorderUI();
-  });
-
-  document.getElementById('recSendBtn').addEventListener('click', function() {
-    form.dispatchEvent(new Event('submit'));
   });
 
   fileInput.addEventListener('change', function() {
@@ -777,7 +761,6 @@
         recHint.textContent = _t('hintDone', {time: formatTime(seconds)});
         recHint.className = 'rec-hint';
         recPreview.style.display = 'block';
-        document.getElementById('recActions').classList.add('show');
         var audio = document.createElement('audio');
         audio.controls = true;
         audio.src = URL.createObjectURL(recordedBlob);
