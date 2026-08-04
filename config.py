@@ -7,11 +7,13 @@ load_dotenv()
 
 
 class Config:
+    ENV = os.getenv('ENV', 'test')
+
     MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
     MYSQL_PORT = int(os.getenv('MYSQL_PORT', 3306))
     MYSQL_USER = os.getenv('MYSQL_USER', 'root')
     MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
-    MYSQL_DB = os.getenv('MYSQL_DB', 'sleepbot')
+    MYSQL_DB = os.getenv('MYSQL_DB', 'sleepbot_test' if ENV != 'production' else 'sleepbot')
 
     SQLALCHEMY_DATABASE_URI = (
         f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}'
@@ -26,6 +28,7 @@ class Config:
     OSS_ENDPOINT_SG = os.getenv('OSS_ENDPOINT_SG', '')
     OSS_BUCKET_CN = os.getenv('OSS_BUCKET_CN', 'cn-bucket')
     OSS_BUCKET_SG = os.getenv('OSS_BUCKET_SG', 'sg-bucket')
+    OSS_OBJECT_KEY_PREFIX = 'materials' if ENV == 'production' else 'materials/test'
     ASSET_SESSION_TTL = int(os.getenv('ASSET_SESSION_TTL', '3600'))
 
     UPLOAD_BASE_URL = os.getenv('UPLOAD_BASE_URL', 'http://localhost:5050')

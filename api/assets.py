@@ -196,7 +196,7 @@ def upload_file(session_id):
             abort(400, _msg('file_too_large'))
 
         ext = secure_filename(f.filename).rsplit('.', 1)[-1] if '.' in f.filename else ''
-        object_key = f'materials/{user_id}/{uuid.uuid4()}.{ext}'
+        object_key = f'{current_app.config["OSS_OBJECT_KEY_PREFIX"]}/{user_id}/{uuid.uuid4()}.{ext}'
 
         bucket = get_bucket('cn')
 
