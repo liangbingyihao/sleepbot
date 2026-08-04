@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.git/
+.idea/
+.vscode/
+.pytest_cache/
+.venv/
+env/
+.env
+*.md
+tests/
+scripts/
+docs/
+backup-full-session.json

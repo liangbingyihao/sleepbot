@@ -71,26 +71,79 @@ nohup python app.py > app.log 2>&1 &
 **生产模式 (uWSGI)**:
 
 ```bash
-nohup uwsgi --http 0.0.0.0:5050 --module app:create_app() --callable app > uwsgi.log 2>&1 &
+uwsgi --ini uwsgi.ini
 ```
 
-或使用 uwsgi 配置文件 `uwsgi.ini`:
+`uwsgi.ini` 配置:
 
 ```ini
 [uwsgi]
-http = 0.0.0.0:5050
-module = app:create_app()
-callable = app
+module = app
+callable = application
 master = true
 processes = 4
 threads = 2
-buffer-size = 32768
+http = 0.0.0.0:5050
+die-on-term = true
+enable-threads = true
+lazy-apps = true
+buffer-size = 65535
+harakiri = 60
+logto = /dev/stdout
+log-4xx = true
+log-5xx = true
 ```
 
-启动:
+后台运行:
 
 ```bash
-nohup uwsgi uwsgi.ini > uwsgi.log 2>&1 &
+nohup uwsgi --ini uwsgi.ini > uwsgi.log 2>&1 &
+```
+
+## Docker 部署
+
+### 构建镜像
+
+```bash
+docker build -t sleepbot .
+```
+
+### 启动容器
+
+```bash
+docker run -d \
+  --name sleepbot \
+  -p 5050:5050 \
+  -e MYSQL_HOST=your_mysql_host \
+  -e MYSQL_PORT=3306 \
+  -e MYSQL_USER=sleepbot \
+  -e MYSQL_PASSWORD=your_password \
+  -e MYSQL_DB=sleepbot \
+  -e OSS_ACCESS_KEY_ID=your_oss_key \
+  -e OSS_ACCESS_KEY_SECRET=your_oss_secret \
+  -e OSS_ENDPOINT_CN=oss-cn-hongkong.aliyuncs.com \
+  -e OSS_ENDPOINT_SG=oss-ap-southeast-1.aliyuncs.com \
+  -e OSS_BUCKET_CN=your-cn-bucket \
+  -e OSS_BUCKET_SG=your-sg-bucket \
+  sleepbot
+```
+
+或使用 `.env` 文件:
+
+```bash
+docker run -d --name sleepbot -p 5050:5050 --env-file .env sleepbot
+```
+
+### 查看日志
+
+```bash
+docker logs -f sleepbot
+```
+
+### 停止
+
+```bash
+docker stop sleepbot && docker rm sleepbot
 ```
 
 ## 验证部署
