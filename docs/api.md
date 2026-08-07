@@ -659,12 +659,19 @@ POST /assets/session
   "data": {
     "session_id": "a1b2c3d4-...",
     "url": "http://localhost:5050/upload.html?session_id=a1b2c3d4-...",
+    "invite_record": "http://localhost:5050/upload.html?session_id=a1b2c3d4-...",
+    "invite_install": "http://localhost:5050/download?session_id=a1b2c3d4-...",
     "expires_at": "2026-05-26 10:00:00"
   }
 }
 ```
 
-`expires_at` 为 UTC 时间，客户端可用于判断 session 是否过期，无需额外请求。`url` 为采集页面链接，可分享给好友。有效期在服务端配置（默认 1 小时）。
+| 字段 | 说明 |
+|------|------|
+| `url` | **已废弃**，保留兼容，等同于 `invite_record` |
+| `invite_record` | 鼓励素材采集页面链接，分享给好友录制语音/文字 |
+| `invite_install` | 邀请好友安装应用的链接（带 session_id 追踪） |
+| `expires_at` | UTC 过期时间，客户端可据此判断是否需要续期 |
 
 **客户端缓存策略建议**:
 

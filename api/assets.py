@@ -97,6 +97,8 @@ def create_session(user_id):
     return ok({
         'session_id': session_id,
         'url': f'{base_url}/upload?session_id={session_id}',
+        'invite_record': f'{base_url}/invite/record?session_id={session_id}',
+        'invite_install': f'{base_url}/invite/install?session_id={session_id}',
         'expires_at': expires_at.strftime('%Y-%m-%d %H:%M:%S'),
     })
 

@@ -12,6 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 5050
+EXPOSE 8090
 
 CMD ["uwsgi", "--ini", "uwsgi.ini"]
