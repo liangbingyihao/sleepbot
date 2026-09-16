@@ -369,30 +369,17 @@ def _resolve_target(request_user_id):
 #   5. 组装响应
 
 
-@report_bp.route('/report/daily', methods=['GET'])
-@require_user_id
-def daily_report(user_id):
-    """日报：单晚睡眠报告
-
-    Query: ?date=YYYY-MM-DD&friend_id=xxx
-    friend_id 可选，传入时查看好友的报告
-    """
-    date_str = request.args.get('date', '')
-    try:
-        d = date.fromisoformat(date_str)
-    except (ValueError, TypeError):
-        abort(400, 'date 格式错误，应为 YYYY-MM-DD')
-
-    target_id = _resolve_target(user_id)
+def build_daily_report(target_id, d):
+    """日报业务计算：返回响应 data 字典；用户无睡眠配置时返回 None"""
     current_cfg = _get_config(target_id)
     if not current_cfg:
-        abort(404, '未找到睡眠配置')
+        return None
 
     lock_s, unlock, day_type = _night_stats(target_id, current_cfg, d)
 
     # 空态
     if lock_s <= 0:
-        return ok({
+        return {
             'type': 'day',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -406,7 +393,7 @@ def daily_report(user_id):
             'save_seconds': 0,
             'save_tip': _t('summary_empty'),
             'day_type_label': _t('label_empty'),
-        })
+        }
 
     # 挽回时长：基线 ≥3晚 且 当日挽回 ≥0 才展示
     baseline, total_nights = _calc_baseline(target_id, current_cfg)
@@ -432,7 +419,7 @@ def daily_report(user_id):
     else:
         save_tip = _t('summary_no_save')
 
-    return ok({
+    return {
         'type': 'day',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -446,15 +433,16 @@ def daily_report(user_id):
         'save_seconds': save_seconds,
         'save_tip': save_tip,
         'day_type_label': _t(f'label_{day_type}'),
-    })
+    }
 
 
-@report_bp.route('/report/weekly', methods=['GET'])
+@report_bp.route('/report/daily', methods=['GET'])
 @require_user_id
-def weekly_report(user_id):
-    """周报：本周一~日汇总（含环比上周解锁变化率）
+def daily_report(user_id):
+    """日报：单晚睡眠报告
 
-    Query: ?date=YYYY-MM-DD（取该日所在周的周一~周日）
+    Query: ?date=YYYY-MM-DD&friend_id=xxx
+    friend_id 可选，传入时查看好友的报告
     """
     date_str = request.args.get('date', '')
     try:
@@ -463,9 +451,17 @@ def weekly_report(user_id):
         abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
     target_id = _resolve_target(user_id)
+    payload = build_daily_report(target_id, d)
+    if payload is None:
+        abort(404, '未找到睡眠配置')
+    return ok(payload)
+
+
+def build_weekly_report(target_id, d):
+    """周报业务计算：返回响应 data 字典；用户无睡眠配置时返回 None"""
     current_cfg = _get_config(target_id)
     if not current_cfg:
-        abort(404, '未找到睡眠配置')
+        return None
 
     monday = d - timedelta(days=d.weekday())
     days = [monday + timedelta(days=i) for i in range(7)]
@@ -487,7 +483,7 @@ def weekly_report(user_id):
         day_list.append({'day': str(day.day), 'type': day_type})
 
     if days_with_data == 0:
-        return ok({
+        return {
             'type': 'week',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -501,7 +497,7 @@ def weekly_report(user_id):
             'total_save_hour': '',
             'encourage_text': _t('encourage_weekly'),
             'week_day_list': day_list,
-        })
+        }
 
     avg_unlock = round(total_unlock / days_with_data, 1) if days_with_data > 0 else 0
 
@@ -539,7 +535,7 @@ def weekly_report(user_id):
         if has_save:
             total_save_hour = _fmt_duration(total_save)
 
-    return ok({
+    return {
         'type': 'week',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -553,27 +549,34 @@ def weekly_report(user_id):
         'total_save_hour': total_save_hour,
         'encourage_text': _t('encourage_weekly'),
         'week_day_list': day_list,
-    })
+    }
 
 
-@report_bp.route('/report/monthly', methods=['GET'])
+@report_bp.route('/report/weekly', methods=['GET'])
 @require_user_id
-def monthly_report(user_id):
-    """月报：全月日历 + 解锁/打卡汇总（含环比上月、连续打卡、自动评语）
+def weekly_report(user_id):
+    """周报：本周一~日汇总（含环比上周解锁变化率）
 
-    Query: ?month=YYYY-MM
+    Query: ?date=YYYY-MM-DD（取该日所在周的周一~周日）
     """
-    month_str = request.args.get('month', '')
+    date_str = request.args.get('date', '')
     try:
-        parts = month_str.split('-')
-        year, month = int(parts[0]), int(parts[1])
-    except (ValueError, IndexError, TypeError):
-        abort(400, 'month 格式错误，应为 YYYY-MM')
+        d = date.fromisoformat(date_str)
+    except (ValueError, TypeError):
+        abort(400, 'date 格式错误，应为 YYYY-MM-DD')
 
     target_id = _resolve_target(user_id)
+    payload = build_weekly_report(target_id, d)
+    if payload is None:
+        abort(404, '未找到睡眠配置')
+    return ok(payload)
+
+
+def build_monthly_report(target_id, year, month):
+    """月报业务计算：返回响应 data 字典；用户无睡眠配置时返回 None"""
     current_cfg = _get_config(target_id)
     if not current_cfg:
-        abort(404, '未找到睡眠配置')
+        return None
 
     first_day = date(year, month, 1)
     if month == 12:
@@ -601,7 +604,7 @@ def monthly_report(user_id):
         day_list.append({'day': str(day.day), 'type': day_type})
 
     if days_with_data == 0:
-        return ok({
+        return {
             'type': 'month',
             'custom_sleep_time': _fmt_sleep_window(current_cfg),
             'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -614,7 +617,7 @@ def monthly_report(user_id):
             'month_save_hour': '',
             'month_comment': '',
             'month_day_list': day_list,
-        })
+        }
 
     avg_day_lock = total_lock // days_with_data if days_with_data > 0 else 0
     avg_unlock = round(total_unlock / days_with_data, 1) if days_with_data > 0 else 0
@@ -651,7 +654,7 @@ def monthly_report(user_id):
 
     comment = _month_comment(avg_unlock, success_count, days_with_data, current_cfg.sleep_is_unhealthy)
 
-    return ok({
+    return {
         'type': 'month',
         'custom_sleep_time': _fmt_sleep_window(current_cfg),
         'sleep_is_unhealthy': current_cfg.sleep_is_unhealthy,
@@ -664,7 +667,28 @@ def monthly_report(user_id):
         'month_save_hour': month_save_hour,
         'month_comment': comment,
         'month_day_list': day_list,
-    })
+    }
+
+
+@report_bp.route('/report/monthly', methods=['GET'])
+@require_user_id
+def monthly_report(user_id):
+    """月报：全月日历 + 解锁/打卡汇总（含环比上月、连续打卡、自动评语）
+
+    Query: ?month=YYYY-MM
+    """
+    month_str = request.args.get('month', '')
+    try:
+        parts = month_str.split('-')
+        year, month = int(parts[0]), int(parts[1])
+    except (ValueError, IndexError, TypeError):
+        abort(400, 'month 格式错误，应为 YYYY-MM')
+
+    target_id = _resolve_target(user_id)
+    payload = build_monthly_report(target_id, year, month)
+    if payload is None:
+        abort(404, '未找到睡眠配置')
+    return ok(payload)
 
 
 def _prev_month(year, month):

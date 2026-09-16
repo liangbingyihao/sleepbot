@@ -695,7 +695,7 @@ GET /assets/friend/session/<session_id>
 
 无需鉴权。前端页面在加载时调用此接口判断 session 是否有效。
 
-**响应示例**:
+**基础响应**（不传任何参数，与旧版完全一致）:
 ```json
 {
   "code": "OK",
@@ -705,6 +705,77 @@ GET /assets/friend/session/<session_id>
     "expires_at": "2026-05-26 10:00:00",
     "creator_name": "张三",
     "invite_code": "ABC123"
+  }
+}
+```
+
+**Query 参数**（可选，隐式触发报告）:
+
+| 参数 | 类型 | 触发的报告 | 说明 |
+|---|---|---|---|
+| `date` | string | 日报 + 周报 | 基准日期 `YYYY-MM-DD`，周报取该日所在周 |
+| `month` | string | 月报 | 月份 `YYYY-MM` |
+
+**说明**: 仅当传入合法 `date` / `month` 时才计算并追加对应报告字段（`date` → `daily_report` + `weekly_report`，`month` → `monthly_report`，两者都传 → 三份）。报告字段结构与 §6 报告接口的 `data` 完全一致（同一套逻辑生成）。当 session 已过期或创建者（session 用户）未配置睡眠时段时，被触发的报告为 `null`；未被触发的字段不出现。非法 `date` / `month` 会被忽略（等同未传，不报错）。
+
+**携带参数时的响应**（`?date=2026-06-22&month=2026-06`）:
+```json
+{
+  "code": "OK",
+  "data": {
+    "valid": true,
+    "expired": false,
+    "expires_at": "2026-05-26 10:00:00",
+    "creator_name": "张三",
+    "invite_code": "ABC123",
+    "daily_report": {
+      "type": "day",
+      "custom_sleep_time": "23:00 – 07:00",
+      "sleep_is_unhealthy": false,
+      "timezone": "Asia/Shanghai",
+      "lock_hour": "7小时21分",
+      "lock_seconds": 26460,
+      "unlock_count": 1,
+      "day_type": "success",
+      "show_save_time": true,
+      "save_hour": "40分钟",
+      "save_seconds": 2400,
+      "save_tip": "比之前少玩40分钟，表现优秀！",
+      "day_type_label": "很棒"
+    },
+    "weekly_report": {
+      "type": "week",
+      "custom_sleep_time": "23:00 – 07:00",
+      "sleep_is_unhealthy": false,
+      "timezone": "Asia/Shanghai",
+      "total_lock_minute": 4320,
+      "total_lock_hour": "72小时",
+      "success_day": 5,
+      "avg_unlock": 1.2,
+      "show_rate": true,
+      "rate": 35,
+      "total_save_hour": "7小时40分",
+      "encourage_text": "下周继续和搭档一起坚守作息，收获更好的睡眠吧",
+      "week_day_list": [
+        {"day": "1", "type": "success"}
+      ]
+    },
+    "monthly_report": {
+      "type": "month",
+      "custom_sleep_time": "23:00 – 07:00",
+      "sleep_is_unhealthy": false,
+      "timezone": "Asia/Shanghai",
+      "month_total_hour": "210小时",
+      "avg_day_hour": "7小时",
+      "success_month_day": 18,
+      "max_serial_day": 9,
+      "show_save_time": true,
+      "month_save_hour": "42小时10分",
+      "month_comment": "本月自控力稳步提升，熬夜次数明显减少，继续保持",
+      "month_day_list": [
+        {"day": "1", "type": "success"}
+      ]
+    }
   }
 }
 ```

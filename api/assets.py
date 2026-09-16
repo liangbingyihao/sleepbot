@@ -1,6 +1,6 @@
 import uuid
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from flask import Blueprint, request, abort, current_app, send_from_directory, g
 from werkzeug.utils import secure_filename
@@ -9,6 +9,11 @@ from models import db, UploadSession, UserOssFile, SystemMaterial, Users
 from api.utils import require_user_id
 from api.errors import ok
 from api.assets_oss import get_bucket, presign_url, upload_to_oss, delete_from_oss
+from api.report import (
+    build_daily_report,
+    build_weekly_report,
+    build_monthly_report,
+)
 
 assets_bp = Blueprint('assets', __name__)
 _logger = logging.getLogger(__name__)
@@ -113,13 +118,42 @@ def session_info(session_id):
     user = Users.query.filter_by(id=int(session.user_id)).first()
     creator_name = user.display_name if user and user.display_name else ''
 
-    return ok({
-        'valid': not session.is_expired(),
-        'expired': session.is_expired(),
+    expired = session.is_expired()
+    owner_id = session.user_id
+
+    # 仅当显式传入合法 date/month 时才生成对应报告；否则维持旧输出
+    date_str = request.args.get('date', '')
+    day = None
+    if date_str:
+        try:
+            day = date.fromisoformat(date_str)
+        except (ValueError, TypeError):
+            _logger.warning('session_info invalid date=%s session_id=%s', date_str, session_id)
+
+    month_str = request.args.get('month', '')
+    year = month = None
+    if month_str:
+        try:
+            parts = month_str.split('-')
+            year, month = int(parts[0]), int(parts[1])
+        except (ValueError, IndexError, TypeError):
+            _logger.warning('session_info invalid month=%s session_id=%s', month_str, session_id)
+
+    data = {
+        'valid': not expired,
+        'expired': expired,
         'expires_at': session.expires_at.strftime('%Y-%m-%d %H:%M:%S'),
         'creator_name': creator_name,
         'invite_code': session.invite_code,
-    })
+    }
+
+    if day is not None:
+        data['daily_report'] = None if expired else build_daily_report(owner_id, day)
+        data['weekly_report'] = None if expired else build_weekly_report(owner_id, day)
+    if year is not None and month is not None:
+        data['monthly_report'] = None if expired else build_monthly_report(owner_id, year, month)
+
+    return ok(data)
 
 
 @assets_bp.route('/assets/friend/upload/<session_id>', methods=['GET'])
