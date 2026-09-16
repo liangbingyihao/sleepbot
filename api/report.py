@@ -14,12 +14,15 @@ import pytz
 from flask import Blueprint, request, abort, g
 
 from models import db, UserStatus, SleepConfig, SleepConfigHistory, Friendship
-from api.utils import require_user_id
+from api.utils import require_user_id, filter_confirmed_active
 from api.errors import ok
 
 report_bp = Blueprint('report', __name__)
 
 _BASELINE_MIN_NIGHTS = 3
+
+# 窗口两端容差：起始容差内折叠抖动，结束容差用于捕获刚过界的 awake
+_WINDOW_TOL_SECONDS = 120
 
 _I18N = {
     'summary_empty': {
@@ -164,14 +167,37 @@ def _get_statuses(user_id, start, end):
         UserStatus.query
         .filter_by(user_id=user_id)
         .filter(UserStatus.reported_at >= start, UserStatus.reported_at < end)
-        .order_by(UserStatus.reported_at.asc())
+        .order_by(UserStatus.reported_at.asc(), UserStatus.id.asc())
         .all()
     )
 
 
+def _collapse_start(records, start):
+    """起始容差区 [start, start+2min) 内只保留最后一条，消除进入睡眠时的回调抖动"""
+    tol_end = start + timedelta(seconds=_WINDOW_TOL_SECONDS)
+    in_tol = [r for r in records if r.reported_at < tol_end]
+    after = [r for r in records if r.reported_at >= tol_end]
+    if in_tol:
+        return [in_tol[-1]] + after
+    return after
+
+
+def _get_effective_statuses(user_id, start, end):
+    """获取窗口内有效状态记录：
+
+    1. 查询扩展结束容差 [start, end + 2min)，捕获刚过界的 awake
+    2. 过滤未确认的 active
+    3. 折叠起始容差区抖动
+    """
+    tol_end = end + timedelta(seconds=_WINDOW_TOL_SECONDS)
+    records = _get_statuses(user_id, start, tol_end)
+    records = filter_confirmed_active(records)
+    return _collapse_start(records, start)
+
+
 def _calc_lock_seconds(user_id, start, end):
-    """计算自定义时段内有效锁屏秒数"""
-    records = _get_statuses(user_id, start, end)
+    """计算自定义时段内有效锁屏秒数（锁屏时长封顶于窗口结束 end）"""
+    records = _get_effective_statuses(user_id, start, end)
     if not records:
         return 0
 
@@ -182,18 +208,25 @@ def _calc_lock_seconds(user_id, start, end):
 
         if cur.status == 'locked':
             until = nxt.reported_at if nxt else end
-            total += (until - cur.reported_at).total_seconds()
+            if until > end:
+                until = end
+            if until > cur.reported_at:
+                total += (until - cur.reported_at).total_seconds()
 
     return int(total)
 
 
 def _calc_unlock_count(user_id, start, end):
-    """计算自定义时段内 locked → 非 locked 切换次数"""
-    records = _get_statuses(user_id, start, end)
+    """计算自定义时段内 locked → 非 locked 切换次数
+
+    落在结束容差区（reported_at >= end）的 awake 属于起床，不计入解锁次数
+    """
+    records = _get_effective_statuses(user_id, start, end)
     count = 0
     for i in range(len(records) - 1):
         if records[i].status == 'locked' and records[i + 1].status != 'locked':
-            count += 1
+            if records[i + 1].reported_at < end:
+                count += 1
     return count
 
 

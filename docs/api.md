@@ -449,8 +449,8 @@ GET /friends
 | 值 | 判定 |
 |------|------|
 | `awake` | 当前时间不在好友睡眠时段内 |
-| `unlocked` | 在睡眠时段内，且好友上报过解锁操作（最新状态非 locked） |
-| `locked` | 在睡眠时段内，好友未上报解锁操作（最新状态为 locked 或无数据） |
+| `unlocked` | 在睡眠时段内，且存在被确认的解锁企图（`active` 且其后 60 秒内紧跟 `awake`） |
+| `locked` | 在睡眠时段内，无被确认的解锁企图（否则视为 locked） |
 | `no_config` | 好友未配置睡眠时间 |
 
 `sleep_status` 仅在好友处于睡眠时段时查询 `user_status` 表，否则直接返回 `awake`，零额外查询。
@@ -941,6 +941,15 @@ DELETE /assets/system_materials/<id>  # 删除（同时删除 OSS 文件）
 - 🟢 **success**: 有效锁屏时长 > 时段总时长 × 0.875
 - 🟡 **warning**: 时段总时长 × 0.625 ≤ 有效锁屏时长 ≤ 时段总时长 × 0.875
 - 🔴 **danger**: 有效锁屏时长 < 时段总时长 × 0.625
+
+**状态统计规则**（`locked` / `awake` 由扩展 monitor 进入/退出锁定时产生）：
+
+1. **稳定排序**：状态记录按 `(reported_at, id)` 升序，同秒记录顺序确定
+2. **active 确认**：`active`（用户企图解锁）仅当其下一条记录为 `awake` 且间隔 ≤ 60 秒时才算真实解锁，否则丢弃
+3. **窗口起始容差 2 分钟**：`[start, start+2min)` 内的上报只保留最后一条，消除进入睡眠时的回调抖动
+4. **窗口结束容差 2 分钟**：查询扩展到 `end+2min`，捕获刚过界的起床 `awake`
+5. **起床不计解锁**：落在结束容差区（`reported_at ≥ end`）的 `locked → awake` 属起床，不计入 `unlock_count`
+6. **锁屏封顶**：锁屏时长封顶于窗口结束 `end`
 
 所有报告均返回用户睡眠配置（`custom_sleep_time` 字符串、`sleep_is_unhealthy` 布尔），前端据此渲染时段文案和健康警示。
 

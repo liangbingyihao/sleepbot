@@ -4,7 +4,7 @@ import pytz
 from flask import Blueprint, request, abort, g
 
 from models import db, Friendship, SleepConfig, Users, UserStatus, UserOssFile, SystemMaterial
-from api.utils import require_user_id
+from api.utils import require_user_id, filter_confirmed_active
 from api.errors import ok
 
 supervision_bp = Blueprint('supervision', __name__)
@@ -187,7 +187,7 @@ def _sleep_status(cfg, user_id):
     """计算当前 sleep_status
 
     返回: 'awake' | 'unlocked' | 'locked' | 'no_config'
-    仅当落在睡眠时段内时，才查 DB：存在非 locked 记录才判 unlocked
+    仅当落在睡眠时段内时，才查 DB：存在被确认的解锁企图（active，且 60 秒内紧跟 awake）才判 unlocked
     """
     in_window, local_date = _resolve_window(cfg)
     if local_date is None:
@@ -196,12 +196,15 @@ def _sleep_status(cfg, user_id):
         return 'awake'
 
     window_start, window_end = _local_night_to_utc(cfg, local_date)
-    unlocked = UserStatus.query.filter(
-        UserStatus.user_id == user_id,
-        UserStatus.reported_at >= window_start,
-        UserStatus.reported_at < window_end,
-        UserStatus.status == 'active',
-    ).first()
+    records = (
+        UserStatus.query
+        .filter(UserStatus.user_id == user_id,
+                UserStatus.reported_at >= window_start,
+                UserStatus.reported_at < window_end)
+        .order_by(UserStatus.reported_at.asc(), UserStatus.id.asc())
+        .all()
+    )
+    unlocked = any(r.status == 'active' for r in filter_confirmed_active(records))
     return 'unlocked' if unlocked else 'locked'
 
 
